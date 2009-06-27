@@ -1,4 +1,5 @@
 from vm.vm import VM
+from submission import Submission
 
 # World constants.
 EARTH_RADIUS = 6.357e6 # [m]
@@ -8,6 +9,7 @@ class Simulation(object):
         self.name = name
         self.problem = problem
         self.conf = conf
+        self.submission = Submission(7, conf)
         # VM
         self.vm = VM(problem, conf, 1)
         # State
@@ -28,7 +30,17 @@ class Simulation(object):
             slist.append(self.state)
             if self.initial_fuel is None:
                 self.initial_fuel = self.state.current_fuel
+            dvx = self.vm.output[2]
+            dvy = self.vm.output[3]
             self.input()
+            pv = []
+            if dvx != self.vm.output[2]:
+                pv.append((2, self.vm.output[2])) 
+            if dvx != self.vm.output[3]:
+                pv.append((3, self.vm.output[3])) 
+            if pv:
+                self.submission.add(self.time, pv)
+                
         self.history.extend(slist)
         return slist
         

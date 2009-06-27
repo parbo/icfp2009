@@ -31,14 +31,16 @@ class Submission(object):
         self._steps.append((time, portvalues))
         self._steps.sort()
 
-
     def __str__(self):
         tmp = [self._header]        
+        t = 0
         for i, s in enumerate(self._steps):
             t, pvs = s
             tmp.append(struct.pack(Submission.STEPHDRFMT, t, len(pvs)))
             for p, v in pvs:
                 tmp.append(struct.pack(Submission.PORTFMT, p, v))
+        # append end marker
+        tmp.append(struct.pack(Submission.STEPHDRFMT, t+1, 0))
         return "".join(tmp)
 
 if __name__=="__main__":
