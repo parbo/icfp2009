@@ -37,7 +37,7 @@ class Simulation(object):
         
     @property
     def completed(self):
-        return True
+        return self.state.score != 0.0
     
     @property    
     def porthandles(self):
@@ -49,7 +49,7 @@ class Simulation(object):
 class State(object):
     def __init__(self, time=0, vm=None, previous=None):
         self.time = time
-        self.score = None
+        self.score = 0.0
         # Satellite position
         self.sx = None
         self.sy = None

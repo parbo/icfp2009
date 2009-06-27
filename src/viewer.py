@@ -65,7 +65,8 @@ class Viewer(wx.Frame):
         self.commandSizer.Add(self.zoomOutBtn, 0, flag = wx.EXPAND)
         self.SetSizer(self.mainSizer)
         # Status bar definitions.
-        self.CreateStatusBar(6)
+        bar = self.CreateStatusBar(7)
+        bar.SetStatusWidths([-2, -2, -2, -2, -2, -2, -3])
         # Event initializations.
         self.Bind(wx.EVT_BUTTON, self.OnControlSelectBtn, id = ID_CONTROL_SELECT_BTN)
         self.Bind(wx.EVT_BUTTON, self.OnProblemSelectBtn, id = ID_PROBLEM_SELECT_BTN)
