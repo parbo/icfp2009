@@ -1,5 +1,6 @@
 from simulation import Simulation, EARTH_RADIUS
 from mathutils import Hohmann
+from mathutils import score
 import math
 from vector import Vector
 
@@ -22,6 +23,7 @@ class HohmannSim(Simulation):
         if not self.h:
             self.h = Hohmann(r, tr)
             print self.h
+            print "expected score:", score(self.h.dvt, self.initial_fuel, self.h.TOF+900)
             v = Vector(self.state.vx, self.state.vy)
             d = v.normalize()
             dva = (d * self.h.dva) 
@@ -30,7 +32,7 @@ class HohmannSim(Simulation):
             print d, dva, dvax, dvay
             self.vm.input[2] = dvax
             self.vm.input[3] = dvay
-        if (not self.secondapplied) and abs(self.state.time-self.h.TOF) < 2:            
+        if (not self.secondapplied) and abs(self.state.time-self.h.TOF) < 1:            
             print "Applying second burn"
             v = Vector(self.state.vx, self.state.vy)
             d = v.normalize()

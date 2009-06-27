@@ -7,6 +7,9 @@ Me = 6e24
 def clamp(val, minval, maxval):
     return max(min(val, maxval), minval)
 
+def score(frem, fstart, t):
+    return 25 + 45 * (frem/fstart) + (30 - math.log(t/1000, 2))
+
 class OrbitTransfer(object):
     def __init__(self, ra, rb, atx):
         self.ra = ra
