@@ -1,8 +1,8 @@
 from simulation import Simulation, EARTH_RADIUS
 
 class TestSim(Simulation):
-    def __init__(self):
-        Simulation.__init__(self, 'Test simulation')
+    def __init__(self, problem=None, conf=None):
+        Simulation.__init__(self, 'Test simulation', problem, conf)
         self.sx = 2 * EARTH_RADIUS
         self.sy = EARTH_RADIUS
         self.vx = 0.0
@@ -21,5 +21,5 @@ class TestSim(Simulation):
     def completed(self):
         return not (self.current_fuel > 0.0)
 
-def Create():
-    return TestSim()
+def Create(problem, conf):
+    return TestSim(problem, conf)

@@ -16,7 +16,7 @@ class VMMemory(object):
         self._write(key, value)
 
 class VM(object):
-    def __init__(self):
+    def __init__(self, filename, conf):
         try:
             self._vm = ctypes.cdll.vm
         except OSError:
@@ -32,14 +32,11 @@ class VM(object):
         self._vm.writeinput.argtypes = [ctypes.c_uint, ctypes.c_double]
         self.input = VMMemory(self._vm.readinput, self._vm.writeinput)
         self.output = VMMemory(self._vm.readoutput, None)        
-        self.filename = ""
-
-    def init(self):
-        self._vm.init()
-
-    def load(self, filename):
         self.filename = filename
+        self.conf = conf
+        self._vm.init()
         self._vm.load(filename)
+        self.input[0x3e80] = conf
 
     def step(self):
         self._vm.timestep()    

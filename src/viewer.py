@@ -87,13 +87,14 @@ class Viewer(wx.Frame):
     def OnLoadBtn(self, event):
         print 'OnLoadBtn'
         controller_path = self.controlInput.GetValue()
-        dirpath = os.path.dirname(controller_path)
-        filename = os.path.basename(controller_path)
-        modulename, ext = os.path.splitext(filename)
-        sys.path.append(dirpath)
-        print 'Import module "%s" from %s' % (modulename, dirpath)
+        problem = self.problemInput.GetValue()
+        ctrldirpath = os.path.dirname(controller_path)
+        ctrlfilename = os.path.basename(controller_path)
+        modulename, ext = os.path.splitext(ctrlfilename)
+        sys.path.append(ctrldirpath)
+        print 'Import module "%s" from %s' % (modulename, ctrldirpath)
         module = __import__(modulename)
-        self.sim = module.Create()
+        self.sim = module.Create(problem, 1001)
         self.UpdateStatusBar()
         
     def OnStepBtn(self, event):

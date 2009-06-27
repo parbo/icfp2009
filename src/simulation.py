@@ -1,10 +1,16 @@
+from vm.vm import VM
+
 # World constants.
 EARTH_RADIUS = 6.357e6 # [m]
 
 class Simulation(object):
-    def __init__(self, name=''):
+    def __init__(self, problem, conf, name=''):
         self.name = name
+        self.problem = problem
+        self.conf = conf
         self.time = 0
+        # VM
+        self.vm = VM(problem, conf)
         # Satellite position
         self.sx = None
         self.sy = None
@@ -17,6 +23,8 @@ class Simulation(object):
         
     def step(self, n):
         self.time += n
+        for t in range(n):
+            self.vm.step()
         
     @property
     def completed(self):
@@ -29,8 +37,8 @@ class Simulation(object):
     def port(self, handle):
         return None
         
-def Create():
-    return Simulation()
+def Create(problem, conf):
+    return Simulation(problem, conf)
 
 if __name__ == '__main__':
     pass
