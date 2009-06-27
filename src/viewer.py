@@ -153,11 +153,12 @@ class Viewer(wx.Frame):
         except TypeError:
             fuel = 'fuel: -'
         bar.SetStatusText('t: %d' % self.sim.time, 0)
-        bar.SetStatusText(sx, 1)
-        bar.SetStatusText(sy, 2)
-        bar.SetStatusText(vx, 3)
-        bar.SetStatusText(vy, 4)
-        bar.SetStatusText(fuel, 5)
+        bar.SetStatusText('s: %.1f' % self.sim.state.score, 1)
+        bar.SetStatusText(sx, 2)
+        bar.SetStatusText(sy, 3)
+        bar.SetStatusText(vx, 4)
+        bar.SetStatusText(vy, 5)
+        bar.SetStatusText(fuel, 6)
         
 class Canvas(wx.Panel):
     def __init__(self, parent):
