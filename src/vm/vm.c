@@ -240,7 +240,7 @@ void timestep()
                         switch (imm)
                         {
                             case CMPZ_OP_LTZ:
-                                g_status = (g_data[r1] < 1e-300) ? 1 : 0;
+                                g_status = (g_data[r1] < 0.0) ? 1 : 0;
                                 TRACE3(("%d S: CMPZ <, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
                                 break;
                             case CMPZ_OP_LEZ:
@@ -256,7 +256,7 @@ void timestep()
                                 TRACE3(("%d S: CMPZ >=, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
                                 break;
                             case CMPZ_OP_GTZ:
-                                g_status = (g_data[r1] > 1e-300) ? 1 : 0;
+                                g_status = (g_data[r1] > 0.0) ? 1 : 0;
                                 TRACE3(("%d S: CMPZ >, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
                                 break;
                             default:
