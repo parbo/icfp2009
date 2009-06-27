@@ -17,7 +17,7 @@ ID_RUN_BTN = 105
 ID_TEST_BTN = 999
 
 class Viewer(wx.Frame):
-    def __init__(self, controller='', problem=''):
+    def __init__(self, controller='', problem='', conf=1001):
         wx.Frame.__init__(self, None, -1, TITLE, size = (800, 600), style = wx.DEFAULT_FRAME_STYLE)
         # Frame initializations.
         self.SetBackgroundColour(wx.LIGHT_GREY)
@@ -29,6 +29,7 @@ class Viewer(wx.Frame):
         self.problemInput = wx.TextCtrl(self, -1, problem)
         self.problemLabel = wx.StaticText(self, -1, 'Problem file:')
         self.problemSelectBtn = wx.Button(self, ID_PROBLEM_SELECT_BTN, 'Select')
+        self.configInput = wx.SpinCtrl(self, -1, str(conf), min=1000, max=9999, initial=conf)
         self.loadBtn = wx.Button(self, ID_LOAD_BTN, 'Load')
         self.stepBtn = wx.Button(self, ID_STEP_BTN, 'Step')
         self.stepInput = wx.SpinCtrl(self, -1, '1', min=1, max=3000000, initial=1)
@@ -52,6 +53,7 @@ class Viewer(wx.Frame):
         self.canvasSizer.Add(self.commandSizer, 0, flag = wx.EXPAND)
         self.canvasSizer.Add(self.canvas, 1, flag = wx.EXPAND)
         self.commandSizer.Add(self.loadBtn, 0, flag = wx.EXPAND)
+        self.commandSizer.Add(self.configInput, 0, flag = wx.EXPAND)
         self.commandSizer.Add(self.stepBtn, 0, flag = wx.EXPAND)
         self.commandSizer.Add(self.stepInput, 0, flag = wx.EXPAND)
         self.commandSizer.Add(self.runBtn, 0, flag = wx.EXPAND)
@@ -94,14 +96,15 @@ class Viewer(wx.Frame):
         sys.path.append(ctrldirpath)
         print 'Import module "%s" from %s' % (modulename, ctrldirpath)
         module = __import__(modulename)
-        self.sim = module.Create(problem, 1001)
+        self.sim = module.Create(problem, int(self.configInput.GetValue()))
         self.UpdateStatusBar()
         
     def OnStepBtn(self, event):
         print 'OnStepBtn'
-        self.sim.step(int(self.stepInput.GetValue()))
+        states = self.sim.step(int(self.stepInput.GetValue()))
         dc = wx.ClientDC(self.canvas)
-        self.canvas.PointW(dc, self.sim.sx, self.sim.sy)
+        for state in states:
+            self.canvas.PointW(dc, state.sx, state.sy)
         self.UpdateStatusBar()
         
     def OnRunBtn(self, event):
@@ -109,25 +112,25 @@ class Viewer(wx.Frame):
         while not self.sim.completed > 0:
             self.sim.step()
             dc = wx.ClientDC(self.canvas)
-            self.canvas.PointW(dc, self.sim.sx, self.sim.sy)
+            self.canvas.PointW(dc, self.sim.state.sx, self.sim.state.sy)
             self.UpdateStatusBar()
         
     def UpdateStatusBar(self):
         bar = self.GetStatusBar()
         try:
-            sx = 'sx: %.3e' % self.sim.sx
-            sy = 'sy: %.3e' % self.sim.sy
+            sx = 'sx: %.3e' % self.sim.state.sx
+            sy = 'sy: %.3e' % self.sim.state.sy
         except TypeError:
             sx = 'sx: -'
             sy = 'sy: -'
         try:
-            vx = 'vx: %.3e' % self.sim.vx
-            vy = 'vy: %.3e' % self.sim.vy
+            vx = 'vx: %.3e' % self.sim.state.vx
+            vy = 'vy: %.3e' % self.sim.state.vy
         except TypeError:
             vx = 'vx: -'
             vy = 'vy: -'
         try:
-            fuel = 'fuel: %5.1f%%' % (100.0 * self.sim.current_fuel / self.sim.initial_fuel)
+            fuel = 'fuel: %5.1f%%' % (100.0 * self.sim.state.current_fuel / self.sim.initial_fuel)
         except TypeError:
             fuel = 'fuel: -'
         bar.SetStatusText('t: %d' % self.sim.time, 0)
@@ -163,6 +166,9 @@ class Canvas(wx.Panel):
         print 'Canvas.OnPaint'
         dc = wx.PaintDC(self)
         self.CircleW(dc, 0, 0, EARTH_RADIUS)
+        if self.GetParent().sim is not None:
+            for state in self.GetParent().sim.history:
+                self.PointW(dc, state.sx, state.sy)
         
     def SetWorldSize(self, xw, yw):
         self.xwrq = xw
@@ -205,12 +211,15 @@ class Canvas(wx.Panel):
 if __name__ == '__main__':
     controller = ''
     problem = ''
+    conf = 1001
     if len(sys.argv) > 1:
         controller = sys.argv[1]
     if len(sys.argv) > 2:
         problem = sys.argv[2]
+    if len(sys.argv) > 3:
+        conf = int(sys.argv[3])
     app = wx.App(False)
-    viewer = Viewer(controller, problem)
+    viewer = Viewer(controller, problem, conf)
     viewer.Center()
     app.MainLoop()
     
