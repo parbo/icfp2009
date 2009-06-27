@@ -29,32 +29,28 @@ class HohmannSim(Simulation):
 
         if not self.firstapplied:
             applythrust = False
-            if self.conf in [1001, 1002, 1003, 1004]:
+            if self.scenariotype == "Hohmann":
                 if self.state.sx and self.state.vx:
                     tr = self.vm.output[4]
                     self.h = Hohmann(r, tr)
                     applythrust = True
-            elif self.conf in [2001, 2002, 2003, 2004]:
-                self.satx = self.state.sx - self.vm.output[4]
-                self.saty = self.state.sy - self.vm.output[5]
-                if self.prevsatx:
-                    self.satvx = self.satx - self.prevsatx
-                if self.prevsaty:
-                    self.satvy = self.saty - self.prevsaty
-                self.prevsatx = self.satx
-                self.prevsaty = self.saty
-                satpos = Vector(self.satx, self.saty)
-                tr = abs(satpos)
+            elif self.scenariotype == "MeetAndGreet":                
+                sat = self.state.satellites[0]
+                satpos = Vector(sat.sx, sat.sy)
                 apos = Vector(self.state.sx, self.state.sy)                
-                bpos = -tr * apos.normalize()
+                bpos = -sat.radius * apos.normalize()
                 angle = bpos.angle_signed(satpos)
-                s = tr * angle
-                if self.satvx and self.satvy:
-                    satv = Vector(self.satvx, self.satvy)                    
+                while angle < 0:
+                    angle += 2 * math.pi
+                s = sat.radius * angle
+                if sat.vx and sat.vy:
+                    satv = Vector(sat.vx, sat.vy)                    
                     print "Sat pos", satpos, abs(satpos)
+                    print "Sat radius", sat.radius
                     print "Sat speed", satv, abs(satv)
                     print "Angle", angle
-                    self.h = Hohmann(r, tr)
+                    if not self.h:
+                        self.h = Hohmann(r, sat.radius)
                     print "Time:", s/abs(satv), self.h.TOF
                     if s > 0 and abs(s/abs(satv)-self.h.TOF) < 0.5:
                         applythrust = True            
