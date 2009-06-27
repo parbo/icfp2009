@@ -30,7 +30,7 @@ class HohmannSim(Simulation):
             print d, dva, dvax, dvay
             self.vm.input[2] = dvax
             self.vm.input[3] = dvay
-        if (not self.secondapplied) and (abs(r-tr) < 1000):            
+        if (not self.secondapplied) and abs(self.state.time-self.h.TOF) < 2:            
             print "Applying second burn"
             v = Vector(self.state.vx, self.state.vy)
             d = v.normalize()
@@ -42,9 +42,6 @@ class HohmannSim(Simulation):
             self.vm.input[3] = dvby
             self.secondapplied = True
         
-    @property
-    def completed(self):
-        return not (self.current_fuel > 0.0)
 
 def Create(problem, conf):
     return HohmannSim(problem, conf)
