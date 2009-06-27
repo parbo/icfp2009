@@ -100,6 +100,7 @@ class State(object):
             self.current_fuel = vm.output[1]
             self.sx = vm.output[2]
             self.sy = vm.output[3]
+            self.radius = math.sqrt(self.sx ** 2 + self.sy ** 2)
             if previous is not None:
                 try:
                     self.vx = self.sx - previous.sx
