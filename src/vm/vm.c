@@ -93,15 +93,17 @@ void init()
     }
 }
 
-void load(const char* filename)
+int load(const char* filename)
 {
     FILE* f = fopen(filename, "rb");
     char frame[12];
     uint32_t addr = 0;
+    uint32_t ret = 0;
     TRACE1(("Loading: %s\n", filename));
     TRACE1(("double size: %d\n", sizeof(double)));
     if (f)
     {
+        ret = 1;
         while (fread(frame, sizeof(frame), 1, f))
         {
             if (addr >= 0 && addr < ADDRSPACESZ)
@@ -127,12 +129,14 @@ void load(const char* filename)
             else
             {
                 TRACE1(("Error: binary exceeds address space\n"));
+                ret = 0;
                 break;
             }
         }
         TRACE1(("EOF, read %d\n", addr));
         fclose(f);
     }    
+    return ret;
 }
 
 void writeinput(uint32_t port, double val)
@@ -240,7 +244,7 @@ void timestep()
                         switch (imm)
                         {
                             case CMPZ_OP_LTZ:
-                                g_status = (g_data[r1] < 1e-300) ? 1 : 0;
+                                g_status = (g_data[r1] < 0.0) ? 1 : 0;
                                 TRACE3(("%d S: CMPZ <, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
                                 break;
                             case CMPZ_OP_LEZ:
@@ -256,7 +260,7 @@ void timestep()
                                 TRACE3(("%d S: CMPZ >=, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
                                 break;
                             case CMPZ_OP_GTZ:
-                                g_status = (g_data[r1] > 1e-300) ? 1 : 0;
+                                g_status = (g_data[r1] > 0.0) ? 1 : 0;
                                 TRACE3(("%d S: CMPZ >, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
                                 break;
                             default:
