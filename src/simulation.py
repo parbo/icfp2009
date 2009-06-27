@@ -47,6 +47,17 @@ class Simulation(object):
                 
         self.history.extend(slist)
         return slist
+
+    @property
+    def scenariotype(self):
+        if self.conf in [1001, 1002, 1003, 1004]:
+            return "Hohmann"
+        elif self.conf in [2001, 2002, 2003, 2004]:
+            return "MeetAndGreet"
+        elif self.conf in [3001, 3002, 3003, 3004]:
+            return "EccentricMeetAndGreet"
+        elif self.conf in [4001, 4002, 4003, 4004]:
+            return "OperationClearSkies"
         
     def input(self):
         pass
@@ -56,6 +67,11 @@ class Simulation(object):
         return self.state.score != 0.0
         
     def create_state(self, time=0, vm=None, previous=None):
+        sctype = self.scenariotype
+        if sctype == "Hohmann":
+            return State(time, vm, previous)
+        elif sctype == "MeetAndGreet":
+            return MeetAndGreetState(time, vm, previous)
         return State(time, vm, previous)
     
     @property    
@@ -77,6 +93,8 @@ class State(object):
         self.vy = None
         # Fuel
         self.current_fuel = None
+        self.vm = vm
+        self.previous = previous
         if (time > 0) and (vm is not None):
             self.score = vm.output[0]
             self.current_fuel = vm.output[1]
@@ -125,7 +143,7 @@ class MeetAndGreetState(State):
     def satellite_ports(self, satellite_ix):
         return (4, 5)
         
-def Satellite(object):
+class Satellite(object):
     def __init__(self, ref_sat, xport, yport, previous):
         self.rx = None
         self.ry = None
@@ -134,12 +152,12 @@ def Satellite(object):
         self.radius = None
         self.vx = None
         self.vy = None
-        if (time > 0) and (vm is not None):
-            self.rx = vm.output[xport]
-            self.ry = vm.output[yport]
+        if (ref_sat.time > 0) and (ref_sat.vm is not None):
+            self.rx = ref_sat.vm.output[xport]
+            self.ry = ref_sat.vm.output[yport]
             self.sx = ref_sat.sx - self.rx
             self.sy = ref_sat.sy - self.ry
-            self.radius = math.sqrt(self.sx ** 2, self.sy ** 2)
+            self.radius = math.sqrt(self.sx ** 2 + self.sy ** 2)
             try:
                 self.vx = self.sx - previous.sx
                 self.vy = self.sy - previous.sy
