@@ -130,7 +130,11 @@ class State(object):
         s = []
         for ix in range(self.number_of_satellites()):
             xport, yport = self.satellite_ports(ix)
-            s.append(Satellite(self, xport, yport, previous))
+            try:
+                prevsat = previous.satellites[ix]
+            except AttributeError:
+                prevsat = None
+            s.append(Satellite(self, xport, yport, prevsat))
         return s
         
 class MeetAndGreetState(State):
