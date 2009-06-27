@@ -10,6 +10,7 @@ class Simulation(object):
         self.problem = problem
         self.conf = conf
         self.submission = Submission(7, conf)
+        self.submission.add(0, [(0x3e80, conf)])
         # VM
         self.vm = VM(problem, conf, 1)
         # State
@@ -26,6 +27,8 @@ class Simulation(object):
         for t in range(n):
             self.time += 1
             self.vm.step()
+            if self.completed:
+                break
             self.state = State(self.time, self.vm, self.state)
             slist.append(self.state)
             if self.initial_fuel is None:
@@ -36,7 +39,7 @@ class Simulation(object):
             pv = []
             if dvx != self.vm.input[2]:
                 pv.append((2, self.vm.input[2])) 
-            if dvx != self.vm.output[3]:
+            if dvy != self.vm.output[3]:
                 pv.append((3, self.vm.input[3])) 
             if pv and not self.completed:
                 self.submission.add(self.time, pv)
