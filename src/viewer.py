@@ -2,6 +2,7 @@ import sys
 import math
 import os.path
 import wx
+import wx.lib.newevent
 
 # World constants.
 EARTH_RADIUS = 6.357e6 # [m]
@@ -20,7 +21,10 @@ ID_ZOOM_OUT_BTN = 107
 ID_OUTFILE_SELECT_BTN = 108
 ID_WRITE_BTN = 109
 ID_SHOW_ORBIT_BOX = 110
+ID_RUN_EVENT = 111
 ID_TEST_BTN = 999
+
+RunSimEvent, EVT_RUN_SIM = wx.lib.newevent.NewCommandEvent()
 
 class Viewer(wx.Frame):
     def __init__(self, controller='', problem='', conf=1001, outfile='out.osf'):
@@ -96,8 +100,10 @@ class Viewer(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnZoomInBtn, id = ID_ZOOM_IN_BTN)
         self.Bind(wx.EVT_BUTTON, self.OnZoomOutBtn, id = ID_ZOOM_OUT_BTN)
         self.Bind(wx.EVT_CHECKBOX, self.OnShowOrbitBox, id = ID_SHOW_ORBIT_BOX)
+        self.Bind(EVT_RUN_SIM, self.OnRunEvent, id = ID_RUN_EVENT)
         # Simulation object.
         self.sim = None
+        self.sim_running = False
         # Show window.
         self.Show()
     
@@ -153,8 +159,13 @@ class Viewer(wx.Frame):
         
     def OnRunBtn(self, event):
         print 'OnRunBtn'
-        while not self.sim.completed:
-            self.Run(int(self.stepInput.GetValue()))
+        if self.sim_running:
+            self.sim_running = False
+            self.runBtn.SetLabel('Run')
+        else:
+            self.sim_running = True
+            self.runBtn.SetLabel('Stop')
+            self.AddPendingEvent(RunSimEvent(id=ID_RUN_EVENT))
             
     def OnZoomInBtn(self, event):
         print 'OnZoomInBtn'
@@ -168,17 +179,25 @@ class Viewer(wx.Frame):
         print 'OnShowOrbitBox'
         self.canvas.Refresh()
         
+    def OnRunEvent(self, event):
+        print 'OnRunEvent'
+        self.Run(int(self.stepInput.GetValue()))
+        
     def Run(self, steps):
         states = self.sim.step(steps)
         dc = wx.ClientDC(self.canvas)
         if self.showOrbitBox.GetValue():
             for state in states:
                 self.canvas.DrawState(dc, self, state)
+            if self.sim_running:
+                self.AddPendingEvent(RunSimEvent(id=ID_RUN_EVENT))
         else:
             self.canvas.Refresh()
         self.UpdateStatusBar()
         if self.sim.completed:
             self.writeBtn.Enable()
+            self.runBtn.SetLabel('Run')
+            self.sim_running = False
         
     def UpdateStatusBar(self):
         bar = self.GetStatusBar()
@@ -248,6 +267,8 @@ class Canvas(wx.Panel):
                     self.DrawState(dc, parent, parent.sim.history[-1])
                 except TypeError:
                     pass
+                if parent.sim_running:
+                    self.AddPendingEvent(RunSimEvent(id=ID_RUN_EVENT))
         
     def SetWorldSize(self, xw, yw):
         self.xwrq = xw
