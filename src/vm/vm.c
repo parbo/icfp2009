@@ -93,15 +93,17 @@ void init()
     }
 }
 
-void load(const char* filename)
+int load(const char* filename)
 {
     FILE* f = fopen(filename, "rb");
     char frame[12];
     uint32_t addr = 0;
+    uint32_t ret = 0;
     TRACE1(("Loading: %s\n", filename));
     TRACE1(("double size: %d\n", sizeof(double)));
     if (f)
     {
+        ret = 1;
         while (fread(frame, sizeof(frame), 1, f))
         {
             if (addr >= 0 && addr < ADDRSPACESZ)
@@ -127,12 +129,14 @@ void load(const char* filename)
             else
             {
                 TRACE1(("Error: binary exceeds address space\n"));
+                ret = 0;
                 break;
             }
         }
         TRACE1(("EOF, read %d\n", addr));
         fclose(f);
     }    
+    return ret;
 }
 
 void writeinput(uint32_t port, double val)
