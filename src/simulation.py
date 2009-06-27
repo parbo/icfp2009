@@ -10,8 +10,7 @@ class Simulation(object):
         self.conf = conf
         self.time = 0
         # VM
-        self.vm = VM(problem, conf)
-        self.vm._vm.debuglevel(3)
+        self.vm = VM(problem, conf, 1)
         # Satellite position
         self.sx = None
         self.sy = None

@@ -30,6 +30,7 @@ class VM(object):
         self._vm.readinput.restype = ctypes.c_double
         self._vm.readinput.argtypes = [ctypes.c_uint]
         self._vm.writeinput.argtypes = [ctypes.c_uint, ctypes.c_double]
+        self._vm.load.argtypes = [ctypes.c_char_p]
 
         self.debuglevel(dbglvl)
         self.input = VMMemory(self._vm.readinput, self._vm.writeinput)
