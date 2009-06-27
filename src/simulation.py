@@ -30,15 +30,15 @@ class Simulation(object):
             slist.append(self.state)
             if self.initial_fuel is None:
                 self.initial_fuel = self.state.current_fuel
-            dvx = self.vm.output[2]
-            dvy = self.vm.output[3]
+            dvx = self.vm.input[2]
+            dvy = self.vm.input[3]
             self.input()
             pv = []
-            if dvx != self.vm.output[2]:
-                pv.append((2, self.vm.output[2])) 
+            if dvx != self.vm.input[2]:
+                pv.append((2, self.vm.input[2])) 
             if dvx != self.vm.output[3]:
-                pv.append((3, self.vm.output[3])) 
-            if pv:
+                pv.append((3, self.vm.input[3])) 
+            if pv and not self.completed:
                 self.submission.add(self.time, pv)
                 
         self.history.extend(slist)
