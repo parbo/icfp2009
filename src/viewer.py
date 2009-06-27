@@ -163,7 +163,7 @@ class Viewer(wx.Frame):
         states = self.sim.step(steps)
         dc = wx.ClientDC(self.canvas)
         for state in states:
-            self.canvas.PointW(dc, state.sx, state.sy)
+            self.canvas.DrawState(dc, state)
         self.UpdateStatusBar()
         if self.sim.completed:
             self.writeBtn.Enable()
@@ -226,7 +226,7 @@ class Canvas(wx.Panel):
         if self.GetParent().sim is not None:
             for state in self.GetParent().sim.history:
                 try:
-                    self.PointW(dc, state.sx, state.sy)
+                    self.DrawState(dc, state)
                 except TypeError:
                     pass
         
@@ -249,6 +249,13 @@ class Canvas(wx.Panel):
         self.scale = scale
         self.Refresh()
         print 'Set world size:', self.xw / EARTH_RADIUS, self.yw / EARTH_RADIUS, 'Scale = %.3e m/pxl' % scale
+        
+    def DrawState(self, dc, state):
+        dc.SetPen(wx.RED_PEN)
+        for sat in state.satellites:
+            self.PointW(dc, sat.sx, sat.sy)
+        dc.SetPen(wx.BLACK_PEN)
+        self.PointW(dc, state.sx, state.sy)
         
     # Draw circle in world coordinates.
     def CircleW(self, dc, xw, yw, rw):

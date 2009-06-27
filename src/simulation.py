@@ -1,3 +1,4 @@
+import math
 from vm.vm import VM
 from submission import Submission
 
@@ -126,16 +127,24 @@ class MeetAndGreetState(State):
         
 def Satellite(object):
     def __init__(self, ref_sat, xport, yport, previous):
-        self.rx = vm.output[xport]
-        self.ry = vm.output[yport]
-        self.sx = ref_sat.sx - self.rx
-        self.sy = ref_sat.sy - self.ry
-        try:
-            self.vx = self.sx - previous.sx
-            self.vy = self.sy - previous.sy
-        except TypeError:
-            self.vx = None
-            self.vy = None
+        self.rx = None
+        self.ry = None
+        self.sx = None
+        self.sy = None
+        self.radius = None
+        self.vx = None
+        self.vy = None
+        if (time > 0) and (vm is not None):
+            self.rx = vm.output[xport]
+            self.ry = vm.output[yport]
+            self.sx = ref_sat.sx - self.rx
+            self.sy = ref_sat.sy - self.ry
+            self.radius = math.sqrt(self.sx ** 2, self.sy ** 2)
+            try:
+                self.vx = self.sx - previous.sx
+                self.vy = self.sy - previous.sy
+            except TypeError:
+                pass
         
 def Create(problem, conf):
     return Simulation(problem, conf)
