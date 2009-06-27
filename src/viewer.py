@@ -19,6 +19,7 @@ ID_ZOOM_IN_BTN = 106
 ID_ZOOM_OUT_BTN = 107
 ID_OUTFILE_SELECT_BTN = 108
 ID_WRITE_BTN = 109
+ID_SHOW_ORBIT_BOX = 110
 ID_TEST_BTN = 999
 
 class Viewer(wx.Frame):
@@ -46,6 +47,8 @@ class Viewer(wx.Frame):
         self.runBtn = wx.Button(self, ID_RUN_BTN, 'Run')
         self.zoomInBtn = wx.Button(self, ID_ZOOM_IN_BTN, 'Zoom In')
         self.zoomOutBtn = wx.Button(self, ID_ZOOM_OUT_BTN, 'Zoom Out')
+        self.showOrbitBox = wx.CheckBox(self, ID_SHOW_ORBIT_BOX, 'Show orbit')
+        self.showOrbitBox.SetValue(True)
         self.canvas = Canvas(self)
         # Sizer layout.
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
@@ -77,6 +80,7 @@ class Viewer(wx.Frame):
         self.commandSizer.Add(self.runBtn, 0, flag = wx.EXPAND)
         self.commandSizer.Add(self.zoomInBtn, 0, flag = wx.EXPAND)
         self.commandSizer.Add(self.zoomOutBtn, 0, flag = wx.EXPAND)
+        self.commandSizer.Add(self.showOrbitBox, 0, flag = wx.EXPAND)
         self.SetSizer(self.mainSizer)
         # Status bar definitions.
         bar = self.CreateStatusBar(8)
@@ -91,6 +95,7 @@ class Viewer(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnRunBtn, id = ID_RUN_BTN)
         self.Bind(wx.EVT_BUTTON, self.OnZoomInBtn, id = ID_ZOOM_IN_BTN)
         self.Bind(wx.EVT_BUTTON, self.OnZoomOutBtn, id = ID_ZOOM_OUT_BTN)
+        self.Bind(wx.EVT_CHECKBOX, self.OnShowOrbitBox, id = ID_SHOW_ORBIT_BOX)
         # Simulation object.
         self.sim = None
         # Show window.
@@ -159,11 +164,18 @@ class Viewer(wx.Frame):
         print 'OnZoomOutBtn'
         self.canvas.Zoom(1.5)
         
+    def OnShowOrbitBox(self, event):
+        print 'OnShowOrbitBox'
+        self.canvas.Refresh()
+        
     def Run(self, steps):
         states = self.sim.step(steps)
         dc = wx.ClientDC(self.canvas)
-        for state in states:
-            self.canvas.DrawState(dc, state)
+        if self.showOrbitBox.GetValue():
+            for state in states:
+                self.canvas.DrawState(dc, self, state)
+        else:
+            self.canvas.Refresh()
         self.UpdateStatusBar()
         if self.sim.completed:
             self.writeBtn.Enable()
@@ -223,10 +235,17 @@ class Canvas(wx.Panel):
         print 'Canvas.OnPaint'
         dc = wx.PaintDC(self)
         self.CircleW(dc, 0, 0, EARTH_RADIUS)
-        if self.GetParent().sim is not None:
-            for state in self.GetParent().sim.history:
+        parent = self.GetParent()
+        if parent.sim is not None:
+            if parent.showOrbitBox.GetValue():
+                for state in parent.sim.history:
+                    try:
+                        self.DrawState(dc, parent, state)
+                    except TypeError:
+                        pass
+            else:
                 try:
-                    self.DrawState(dc, state)
+                    self.DrawState(dc, parent, parent.sim.history[-1])
                 except TypeError:
                     pass
         
@@ -250,12 +269,23 @@ class Canvas(wx.Panel):
         self.Refresh()
         print 'Set world size:', self.xw / EARTH_RADIUS, self.yw / EARTH_RADIUS, 'Scale = %.3e m/pxl' % scale
         
-    def DrawState(self, dc, state):
+    def DrawState(self, dc, parent, state):
+        showOrbit = parent.showOrbitBox.GetValue()
         dc.SetPen(wx.RED_PEN)
+        dc.SetBrush(wx.RED_BRUSH)
         for sat in state.satellites:
-            self.PointW(dc, sat.sx, sat.sy)
+            if showOrbit:
+                self.PointW(dc, sat.sx, sat.sy)
+            else:
+                x, y = self.PosP(sat.sx, sat.sy)
+                dc.DrawCircle(x, y, 3)
         dc.SetPen(wx.BLACK_PEN)
-        self.PointW(dc, state.sx, state.sy)
+        dc.SetBrush(wx.BLACK_BRUSH)
+        if showOrbit:
+            self.PointW(dc, state.sx, state.sy)
+        else:
+            x, y = self.PosP(state.sx, state.sy)
+            dc.DrawCircle(x, y, 3)
         
     # Draw circle in world coordinates.
     def CircleW(self, dc, xw, yw, rw):
