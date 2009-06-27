@@ -34,7 +34,7 @@ class Viewer(wx.Frame):
         self.SetBackgroundColour(wx.LIGHT_GREY)
         self.SetMinSize((500, 300))
         # Zoom window
-        self.zoomWindow = ZoomWindow(self)
+        self.zoomWindow = ZoomWindow(self, 1e5)
         self.zoomWindow.Move((1020, 10))
         # Child control initializations.
         self.controlInput = wx.TextCtrl(self, -1, controller)
@@ -107,6 +107,7 @@ class Viewer(wx.Frame):
         self.Bind(wx.EVT_CHECKBOX, self.OnShowOrbitBox, id = ID_SHOW_ORBIT_BOX)
         self.Bind(wx.EVT_CHECKBOX, self.OnShowZoomBox, id = ID_SHOW_ZOOM_BOX)
         self.Bind(EVT_RUN_SIM, self.OnRunEvent, id = ID_RUN_EVENT)
+        self.Bind(wx.EVT_CLOSE, self.OnClose)
         # Simulation object.
         self.sim = None
         self.sim_running = False
@@ -197,6 +198,11 @@ class Viewer(wx.Frame):
         print 'OnRunEvent'
         self.Run(int(self.stepInput.GetValue()))
         
+    def OnClose(self, event):
+        print 'OnClose'
+        self.zoomWindow.Destroy()
+        self.Destroy()
+        
     def Run(self, steps):
         states = self.sim.step(steps)
         dc = wx.ClientDC(self.canvas)
@@ -207,6 +213,7 @@ class Viewer(wx.Frame):
                 self.AddPendingEvent(RunSimEvent(id=ID_RUN_EVENT))
         else:
             self.canvas.Refresh()
+        self.zoomWindow.Refresh()
         self.UpdateStatusBar()
         if self.sim.completed:
             self.writeBtn.Enable()
@@ -344,12 +351,77 @@ class Canvas(wx.Panel):
         return dw / self.scale
         
 class ZoomWindow(wx.Frame):
-    def __init__(self, parent):
-        wx.Frame.__init__(self, parent, -1, 'Zoom window', size = (300, 300), style = wx.MINIMIZE_BOX | wx.CAPTION | wx.RESIZE_BORDER)
+    def __init__(self, parent, world_size):
+        wx.Frame.__init__(self, parent, -1, 'Zoom:', size = (300, 300), style = wx.MINIMIZE_BOX | wx.CAPTION | wx.RESIZE_BORDER)
         # Frame initializations.
         self.SetBackgroundColour(wx.LIGHT_GREY)
         self.SetMinSize((200, 200))
+        # Scale settings.
+        self.xwrq = world_size
+        self.ywrq = world_size
+        self.scale = world_size / 200
+        self.xp = 200
+        self.yp = 200
+        # Status bar.
+        self.CreateStatusBar(2)
+        # Event handlers.
+        self.Bind(wx.EVT_SIZE, self.OnSize)
+        self.Bind(wx.EVT_PAINT, self.OnPaint)
         
+    def OnSize(self, event):
+        print 'Zoom.OnSize'
+        size = self.GetClientSize()
+        self.xp = size.x
+        self.yp = size.y
+        self.UpdateWorldSize()
+        
+    def OnPaint(self, event):
+        print 'Zoom.OnPaint'
+        dc = wx.PaintDC(self)
+        state = self.GetParent().sim.state
+        try:
+            dc.SetPen(wx.RED_PEN)
+            dc.SetBrush(wx.RED_BRUSH)
+            for sat in state.satellites:
+                dx = (sat.sx - state.sx) / self.scale
+                dy = (sat.sy - state.sy) / self.scale
+                x = self.xp / 2 + dx
+                y = self.yp / 2 + dy
+                v = math.sqrt(sat.vx ** 2 + sat.vy ** 2)
+                dc.DrawCircle(x, y, 3)
+                dc.DrawLine(x, y, x + 20 * sat.vx / v, y + 20 * sat.vy / v)
+            dc.SetPen(wx.BLACK_PEN)
+            dc.SetBrush(wx.BLACK_BRUSH)
+            x = self.xp / 2
+            y = self.yp / 2
+            v = math.sqrt(state.vx ** 2 + state.vy ** 2)
+            dc.DrawCircle(x, y, 3)
+            dc.DrawLine(x, y, x + 20 * state.vx / v, y + 20 * state.vy / v)
+        except TypeError:
+            pass
+        
+    def SetWorldSize(self, xw, yw):
+        self.xwrq = xw
+        self.ywrq = yw
+        self.UpdateWorldSize()
+        
+    def UpdateWorldSize(self):
+        if (self.xwrq / self.xp) < (self.ywrq / self.yp):
+            scale = self.ywrq / self.yp # m / pixel
+        else:
+            scale = self.xwrq / self.xp # m / pixel
+        # Size in world coordinates.
+        self.xw = scale * self.xp
+        self.yw = scale * self.yp
+        self.scale = scale
+        self.Refresh()
+        self.SetLabel('Zoom: %.0f m/pixel' % scale)
+        self.UpdateStatusBar()
+        
+    def UpdateStatusBar(self):
+        bar = self.GetStatusBar()
+        bar.SetStatusText('wx: %dm' % self.xw, 0)
+        bar.SetStatusText('wy: %dm' % self.yw, 1)
 
 if __name__ == '__main__':
     controller = ''
