@@ -42,11 +42,14 @@ class VM(object):
     def step(self):
         self._vm.timestep()    
 
-def run(filename, conf):
-    vm = VM()
+    def debuglevel(self, lvl):
+        self._vm.debuglevel(lvl)
 
-    vm.init()
-    vm.load(filename)
+def run(filename, conf):
+    vm = VM(filename, conf)
+
+    vm.debuglevel(3)
+
     ctr = 0
     vm.input[0x3e80] = conf
     print vm.input[0x3e80]
