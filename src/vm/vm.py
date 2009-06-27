@@ -35,7 +35,8 @@ class VM(object):
         self.filename = filename
         self.conf = conf
         self._vm.init()
-        self._vm.load(filename)
+        if not self._vm.load(filename):
+            print 'VM: Failed to load', filename
         self.input[0x3e80] = conf
 
     def step(self):
