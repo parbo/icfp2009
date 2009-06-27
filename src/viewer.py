@@ -21,17 +21,21 @@ ID_ZOOM_OUT_BTN = 107
 ID_OUTFILE_SELECT_BTN = 108
 ID_WRITE_BTN = 109
 ID_SHOW_ORBIT_BOX = 110
-ID_RUN_EVENT = 111
+ID_SHOW_ZOOM_BOX = 111
+ID_RUN_EVENT = 112
 ID_TEST_BTN = 999
 
 RunSimEvent, EVT_RUN_SIM = wx.lib.newevent.NewCommandEvent()
 
 class Viewer(wx.Frame):
     def __init__(self, controller='', problem='', conf=1001, outfile='out.osf'):
-        wx.Frame.__init__(self, None, -1, TITLE, size = (800, 600), style = wx.DEFAULT_FRAME_STYLE)
+        wx.Frame.__init__(self, None, -1, TITLE, size = (1000, 800), style = wx.DEFAULT_FRAME_STYLE)
         # Frame initializations.
         self.SetBackgroundColour(wx.LIGHT_GREY)
         self.SetMinSize((500, 300))
+        # Zoom window
+        self.zoomWindow = ZoomWindow(self)
+        self.zoomWindow.Move((1020, 10))
         # Child control initializations.
         self.controlInput = wx.TextCtrl(self, -1, controller)
         self.controlLabel = wx.StaticText(self, -1, 'Control file:')
@@ -47,12 +51,12 @@ class Viewer(wx.Frame):
         self.writeBtn.Disable()
         self.loadBtn = wx.Button(self, ID_LOAD_BTN, 'Load')
         self.stepBtn = wx.Button(self, ID_STEP_BTN, 'Step')
-        self.stepInput = wx.SpinCtrl(self, -1, '1', min=1, max=3000000, initial=1)
+        self.stepInput = wx.SpinCtrl(self, -1, '100', min=1, max=3000000, initial=100)
         self.runBtn = wx.Button(self, ID_RUN_BTN, 'Run')
         self.zoomInBtn = wx.Button(self, ID_ZOOM_IN_BTN, 'Zoom In')
         self.zoomOutBtn = wx.Button(self, ID_ZOOM_OUT_BTN, 'Zoom Out')
         self.showOrbitBox = wx.CheckBox(self, ID_SHOW_ORBIT_BOX, 'Show orbit')
-        self.showOrbitBox.SetValue(True)
+        self.showZoomBox = wx.CheckBox(self, ID_SHOW_ZOOM_BOX, 'Zoom window')
         self.canvas = Canvas(self)
         # Sizer layout.
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
@@ -85,6 +89,7 @@ class Viewer(wx.Frame):
         self.commandSizer.Add(self.zoomInBtn, 0, flag = wx.EXPAND)
         self.commandSizer.Add(self.zoomOutBtn, 0, flag = wx.EXPAND)
         self.commandSizer.Add(self.showOrbitBox, 0, flag = wx.EXPAND)
+        self.commandSizer.Add(self.showZoomBox, 0, flag = wx.EXPAND)
         self.SetSizer(self.mainSizer)
         # Status bar definitions.
         bar = self.CreateStatusBar(8)
@@ -100,11 +105,13 @@ class Viewer(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnZoomInBtn, id = ID_ZOOM_IN_BTN)
         self.Bind(wx.EVT_BUTTON, self.OnZoomOutBtn, id = ID_ZOOM_OUT_BTN)
         self.Bind(wx.EVT_CHECKBOX, self.OnShowOrbitBox, id = ID_SHOW_ORBIT_BOX)
+        self.Bind(wx.EVT_CHECKBOX, self.OnShowZoomBox, id = ID_SHOW_ZOOM_BOX)
         self.Bind(EVT_RUN_SIM, self.OnRunEvent, id = ID_RUN_EVENT)
         # Simulation object.
         self.sim = None
         self.sim_running = False
         # Show window.
+        self.Move((10, 10))
         self.Show()
     
     # Event handlers.
@@ -178,6 +185,13 @@ class Viewer(wx.Frame):
     def OnShowOrbitBox(self, event):
         print 'OnShowOrbitBox'
         self.canvas.Refresh()
+        
+    def OnShowZoomBox(self, event):
+        print 'OnShowZoomBox'
+        if self.showZoomBox.GetValue():
+            self.zoomWindow.Show()
+        else:
+            self.zoomWindow.Hide()
         
     def OnRunEvent(self, event):
         print 'OnRunEvent'
@@ -328,6 +342,14 @@ class Canvas(wx.Panel):
     # Convert distance in world coordinates to pixels.
     def DistP(self, dw):
         return dw / self.scale
+        
+class ZoomWindow(wx.Frame):
+    def __init__(self, parent):
+        wx.Frame.__init__(self, parent, -1, 'Zoom window', size = (300, 300), style = wx.MINIMIZE_BOX | wx.CAPTION | wx.RESIZE_BORDER)
+        # Frame initializations.
+        self.SetBackgroundColour(wx.LIGHT_GREY)
+        self.SetMinSize((200, 200))
+        
 
 if __name__ == '__main__':
     controller = ''
@@ -341,6 +363,5 @@ if __name__ == '__main__':
         conf = int(sys.argv[3])
     app = wx.App(False)
     viewer = Viewer(controller, problem, conf)
-    viewer.Center()
     app.MainLoop()
     

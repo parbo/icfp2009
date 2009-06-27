@@ -21,7 +21,7 @@ class Simulation(object):
         # Fuel
         self.initial_fuel = None
         # Default world size.
-        self.world_size = (2.2 * EARTH_RADIUS, 2.2 * EARTH_RADIUS)
+        self.world_size = (7.5 * EARTH_RADIUS, 7.5 * EARTH_RADIUS)
         
     def step(self, n=1):
         slist = []
