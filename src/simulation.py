@@ -39,7 +39,7 @@ class Simulation(object):
             pv = []
             if dvx != self.vm.input[2]:
                 pv.append((2, self.vm.input[2])) 
-            if dvy != self.vm.output[3]:
+            if dvy != self.vm.input[3]:
                 pv.append((3, self.vm.input[3])) 
             if pv and not self.completed:
                 self.submission.add(self.time, pv)
