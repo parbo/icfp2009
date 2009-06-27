@@ -22,7 +22,7 @@ ID_WRITE_BTN = 109
 ID_TEST_BTN = 999
 
 class Viewer(wx.Frame):
-    def __init__(self, controller='', problem='', conf=1001, outfile='out.bin'):
+    def __init__(self, controller='', problem='', conf=1001, outfile='out.osf'):
         wx.Frame.__init__(self, None, -1, TITLE, size = (800, 600), style = wx.DEFAULT_FRAME_STYLE)
         # Frame initializations.
         self.SetBackgroundColour(wx.LIGHT_GREY)
@@ -113,7 +113,7 @@ class Viewer(wx.Frame):
         
     def OnOutfileSelectBtn(self, event):
         print 'OnOutfileSelectBtn'
-        dlg = wx.FileDialog(self, 'Select output file', wildcard = 'Output file (*.*)|*.*', style = wx.OPEN | wx.CHANGE_DIR)
+        dlg = wx.FileDialog(self, 'Select output file', wildcard = 'Output file (*.osf)|*.osf', style = wx.OPEN | wx.CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             self.outfileInput.SetValue(dlg.GetPath())
         dlg.Destroy()
