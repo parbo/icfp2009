@@ -168,7 +168,10 @@ class Canvas(wx.Panel):
         self.CircleW(dc, 0, 0, EARTH_RADIUS)
         if self.GetParent().sim is not None:
             for state in self.GetParent().sim.history:
-                self.PointW(dc, state.sx, state.sy)
+                try:
+                    self.PointW(dc, state.sx, state.sy)
+                except TypeError:
+                    pass
         
     def SetWorldSize(self, xw, yw):
         self.xwrq = xw

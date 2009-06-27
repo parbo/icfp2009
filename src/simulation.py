@@ -17,7 +17,7 @@ class Simulation(object):
         # Fuel
         self.initial_fuel = None
         
-    def step(self, n):
+    def step(self, n=1):
         slist = []
         for t in range(n):
             self.time += 1
@@ -67,6 +67,17 @@ class State(object):
                     self.vy = self.sy - previous.sy
                 except TypeError:
                     pass
+                    
+    def __str__(self):
+        s = []
+        s.append('time:  ' + str(self.time))
+        s.append('score: ' + str(self.score))
+        s.append('fuel:  ' + str(self.current_fuel))
+        s.append('sx:    ' + str(self.sx))
+        s.append('sy:    ' + str(self.sy))
+        s.append('vx:    ' + str(self.vx))
+        s.append('vy:    ' + str(self.vy))
+        return '\n'.join(s)
         
 def Create(problem, conf):
     return Simulation(problem, conf)
