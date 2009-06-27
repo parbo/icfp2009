@@ -14,6 +14,8 @@ ID_PROBLEM_SELECT_BTN = 102
 ID_LOAD_BTN = 103
 ID_STEP_BTN = 104
 ID_RUN_BTN = 105
+ID_ZOOM_IN_BTN = 106
+ID_ZOOM_OUT_BTN = 107
 ID_TEST_BTN = 999
 
 class Viewer(wx.Frame):
@@ -34,6 +36,8 @@ class Viewer(wx.Frame):
         self.stepBtn = wx.Button(self, ID_STEP_BTN, 'Step')
         self.stepInput = wx.SpinCtrl(self, -1, '1', min=1, max=3000000, initial=1)
         self.runBtn = wx.Button(self, ID_RUN_BTN, 'Run')
+        self.zoomInBtn = wx.Button(self, ID_ZOOM_IN_BTN, 'Zoom In')
+        self.zoomOutBtn = wx.Button(self, ID_ZOOM_OUT_BTN, 'Zoom Out')
         self.canvas = Canvas(self)
         # Sizer layout.
         self.mainSizer = wx.BoxSizer(wx.VERTICAL)
@@ -57,6 +61,8 @@ class Viewer(wx.Frame):
         self.commandSizer.Add(self.stepBtn, 0, flag = wx.EXPAND)
         self.commandSizer.Add(self.stepInput, 0, flag = wx.EXPAND)
         self.commandSizer.Add(self.runBtn, 0, flag = wx.EXPAND)
+        self.commandSizer.Add(self.zoomInBtn, 0, flag = wx.EXPAND)
+        self.commandSizer.Add(self.zoomOutBtn, 0, flag = wx.EXPAND)
         self.SetSizer(self.mainSizer)
         # Status bar definitions.
         self.CreateStatusBar(6)
@@ -66,6 +72,8 @@ class Viewer(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnLoadBtn, id = ID_LOAD_BTN)
         self.Bind(wx.EVT_BUTTON, self.OnStepBtn, id = ID_STEP_BTN)
         self.Bind(wx.EVT_BUTTON, self.OnRunBtn, id = ID_RUN_BTN)
+        self.Bind(wx.EVT_BUTTON, self.OnZoomInBtn, id = ID_ZOOM_IN_BTN)
+        self.Bind(wx.EVT_BUTTON, self.OnZoomOutBtn, id = ID_ZOOM_OUT_BTN)
         # Simulation object.
         self.sim = None
         # Show window.
@@ -97,6 +105,8 @@ class Viewer(wx.Frame):
         print 'Import module "%s" from %s' % (modulename, ctrldirpath)
         module = __import__(modulename)
         self.sim = module.Create(problem, int(self.configInput.GetValue()))
+        sizex, sizey = self.sim.world_size
+        self.canvas.SetWorldSize(sizex, sizey)
         self.UpdateStatusBar()
         
     def OnStepBtn(self, event):
@@ -114,6 +124,14 @@ class Viewer(wx.Frame):
             dc = wx.ClientDC(self.canvas)
             self.canvas.PointW(dc, self.sim.state.sx, self.sim.state.sy)
             self.UpdateStatusBar()
+            
+    def OnZoomInBtn(self, event):
+        print 'OnZoomInBtn'
+        self.canvas.Zoom(2.0 / 3.0)
+        
+    def OnZoomOutBtn(self, event):
+        print 'OnZoomOutBtn'
+        self.canvas.Zoom(1.5)
         
     def UpdateStatusBar(self):
         bar = self.GetStatusBar()
@@ -130,7 +148,7 @@ class Viewer(wx.Frame):
             vx = 'vx: -'
             vy = 'vy: -'
         try:
-            fuel = 'fuel: %5.1f%%' % (100.0 * self.sim.state.current_fuel / self.sim.initial_fuel)
+            fuel = 'fuel: %.3e (%5.1f%%)' % (self.sim.state.current_fuel, 100.0 * self.sim.state.current_fuel / self.sim.initial_fuel)
         except TypeError:
             fuel = 'fuel: -'
         bar.SetStatusText('t: %d' % self.sim.time, 0)
@@ -177,6 +195,9 @@ class Canvas(wx.Panel):
         self.xwrq = xw
         self.ywrq = yw
         self.UpdateWorldSize()
+        
+    def Zoom(self, factor):
+        self.SetWorldSize(factor * self.xwrq, factor * self.ywrq)
         
     def UpdateWorldSize(self):
         if (self.xwrq / self.xp) < (self.ywrq / self.yp):
