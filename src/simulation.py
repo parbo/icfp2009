@@ -15,7 +15,7 @@ class Simulation(object):
         self.vm = VM(problem, conf, 1)
         # State
         self.time = 0
-        self.state = State()
+        self.state = self.create_state()
         self.history = [self.state]
         # Fuel
         self.initial_fuel = None
@@ -29,7 +29,7 @@ class Simulation(object):
             self.vm.step()
             if self.completed:
                 break
-            self.state = State(self.time, self.vm, self.state)
+            self.state = self.create_state(self.time, self.vm, self.state)
             slist.append(self.state)
             if self.initial_fuel is None:
                 self.initial_fuel = self.state.current_fuel
@@ -53,6 +53,9 @@ class Simulation(object):
     @property
     def completed(self):
         return self.state.score != 0.0
+        
+    def create_state(self, time=0, vm=None, previous=None):
+        return State(time, vm, previous)
     
     @property    
     def porthandles(self):
@@ -84,6 +87,8 @@ class State(object):
                     self.vy = self.sy - previous.sy
                 except TypeError:
                     pass
+        # Other satellites
+        self.satellites = self.get_satellites(vm, previous)
                     
     def __str__(self):
         s = []
@@ -95,6 +100,42 @@ class State(object):
         s.append('vx:    ' + str(self.vx))
         s.append('vy:    ' + str(self.vy))
         return '\n'.join(s)
+        
+    def number_of_satellites(self):
+        return 0
+        
+    def satellite_ports(self, satellite_ix):
+        return None
+        
+    def get_satellites(self, vm, previous):
+        s = []
+        for ix in range(self.number_of_satellites()):
+            xport, yport = self.satellite_ports(ix)
+            s.append(Satellite(self, xport, yport, previous))
+        return s
+        
+class MeetAndGreetState(State):
+    def __init__(self, time=0, vm=None, previous=None):
+        State.__init__(self, time, vm, previous)
+        
+    def number_of_satellites(self):
+        return 1
+        
+    def satellite_ports(self, satellite_ix):
+        return (4, 5)
+        
+def Satellite(object):
+    def __init__(self, ref_sat, xport, yport, previous):
+        self.rx = vm.output[xport]
+        self.ry = vm.output[yport]
+        self.sx = ref_sat.sx - self.rx
+        self.sy = ref_sat.sy - self.ry
+        try:
+            self.vx = self.sx - previous.sx
+            self.vy = self.sy - previous.sy
+        except TypeError:
+            self.vx = None
+            self.vy = None
         
 def Create(problem, conf):
     return Simulation(problem, conf)
