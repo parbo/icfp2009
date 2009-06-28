@@ -6,6 +6,9 @@ Re = 6.357e6
 G = 6.67428e-11
 GMe = G * Me
 
+def sign(x):
+    return 1.0 if x >= 0 else -1.0
+
 def create(vr, vv):
     """
     Create ellipse object from:
@@ -15,17 +18,21 @@ def create(vr, vv):
     h = vr.cross(vv)
     r = abs(vr)
     v = abs(vv)
-    # Flight path angle.
-    fpa = math.acos(min(1.0, h / (r * v)))
-    # Ellipse axis angle.
-    ea = vr.direction() - fpa
     # Semi-major axis length.
     a = 1.0 / (2 / r - v ** 2 / GMe)
     # Semi-minor axis length.
-    b = h * math.sqrt(a / GMe)
+    b = abs(h) * math.sqrt(a / GMe)
     c = math.sqrt(a ** 2 - b ** 2)
-    vc = c * Vector(1, 0).rotate(ea)
-    x, y = (-1.0 * vc).point()
+    # Angle between position and velocity vectors.
+    apv = vr.angle_signed(vv)
+    #apv = apv if apv < math.pi / 2 else math.pi - apv
+    # Other focus point.
+    f = vr + (2 * a - r) * vr.rotate(2 * apv).normalize()
+    # Ellipse axis angle.
+    ea = math.pi - f.direction()
+    # Center
+    vc = 0.5 * f
+    x, y = vc.point()
     return Ellipse(x, y, a, b, ea)
 
 class Ellipse(object):
@@ -47,8 +54,8 @@ class Ellipse(object):
         
     def points(self, n=100):
         ang = [2 * k * math.pi / n for k in range(n)]
-        v = [Vector(self.a * cos(w), self.b * sin(w)) for w in ang]
-        return [v.rotate(self.angle).point()]
+        p = [Vector(self.a * math.cos(w), self.b * math.sin(w)) for w in ang]
+        return [(v.rotate(self.angle) + Vector(self.x, self.y)).point() for v in p]
         
 if __name__ == '__main__':
     ellipse = create(2 * Re * Vector(1, 1).normalize(), 6000 * Vector(-1, 1).normalize())

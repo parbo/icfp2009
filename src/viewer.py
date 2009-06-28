@@ -20,9 +20,11 @@ ID_ZOOM_IN_BTN = 106
 ID_ZOOM_OUT_BTN = 107
 ID_OUTFILE_SELECT_BTN = 108
 ID_WRITE_BTN = 109
-ID_SHOW_ORBIT_BOX = 110
+ID_SHOW_HISTORY_BOX = 110
 ID_SHOW_ZOOM_BOX = 111
-ID_RUN_EVENT = 112
+ID_SHOW_ORBIT_BOX = 112
+ID_INFO_BTN = 113
+ID_RUN_EVENT = 150
 ID_TEST_BTN = 999
 
 RunSimEvent, EVT_RUN_SIM = wx.lib.newevent.NewCommandEvent()
@@ -55,7 +57,9 @@ class Viewer(wx.Frame):
         self.runBtn = wx.Button(self, ID_RUN_BTN, 'Run')
         self.zoomInBtn = wx.Button(self, ID_ZOOM_IN_BTN, 'Zoom In')
         self.zoomOutBtn = wx.Button(self, ID_ZOOM_OUT_BTN, 'Zoom Out')
-        self.showOrbitBox = wx.CheckBox(self, ID_SHOW_ORBIT_BOX, 'Show orbit')
+        self.infoBtn = wx.Button(self, ID_INFO_BTN, 'Info')
+        self.showHistoryBox = wx.CheckBox(self, ID_SHOW_HISTORY_BOX, 'Show history')
+        self.showOrbitBox = wx.CheckBox(self, ID_SHOW_ORBIT_BOX, 'Show orbits')
         self.showZoomBox = wx.CheckBox(self, ID_SHOW_ZOOM_BOX, 'Zoom window')
         self.canvas = Canvas(self)
         # Sizer layout.
@@ -88,6 +92,8 @@ class Viewer(wx.Frame):
         self.commandSizer.Add(self.runBtn, 0, flag = wx.EXPAND)
         self.commandSizer.Add(self.zoomInBtn, 0, flag = wx.EXPAND)
         self.commandSizer.Add(self.zoomOutBtn, 0, flag = wx.EXPAND)
+        self.commandSizer.Add(self.infoBtn, 0, flag = wx.EXPAND)
+        self.commandSizer.Add(self.showHistoryBox, 0, flag = wx.EXPAND)
         self.commandSizer.Add(self.showOrbitBox, 0, flag = wx.EXPAND)
         self.commandSizer.Add(self.showZoomBox, 0, flag = wx.EXPAND)
         self.SetSizer(self.mainSizer)
@@ -104,6 +110,8 @@ class Viewer(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.OnRunBtn, id = ID_RUN_BTN)
         self.Bind(wx.EVT_BUTTON, self.OnZoomInBtn, id = ID_ZOOM_IN_BTN)
         self.Bind(wx.EVT_BUTTON, self.OnZoomOutBtn, id = ID_ZOOM_OUT_BTN)
+        self.Bind(wx.EVT_BUTTON, self.OnInfoBtn, id = ID_INFO_BTN)
+        self.Bind(wx.EVT_CHECKBOX, self.OnShowHistoryBox, id = ID_SHOW_HISTORY_BOX)
         self.Bind(wx.EVT_CHECKBOX, self.OnShowOrbitBox, id = ID_SHOW_ORBIT_BOX)
         self.Bind(wx.EVT_CHECKBOX, self.OnShowZoomBox, id = ID_SHOW_ZOOM_BOX)
         self.Bind(EVT_RUN_SIM, self.OnRunEvent, id = ID_RUN_EVENT)
@@ -183,6 +191,22 @@ class Viewer(wx.Frame):
         #print 'OnZoomOutBtn'
         self.canvas.Zoom(1.5)
         
+    def OnInfoBtn(self, event):
+        #print 'OnInfoBtn'
+        for ix, sat in enumerate(self.sim.state.satellites):
+            print 'Satellite %d orbit' % (ix + 1)
+            print 'x:          %.5e' % sat.orbit.x
+            print 'y:          %.5e' % sat.orbit.y
+            print 'Semi-major: %.5e' % sat.orbit.a
+            print 'Semi-minor: %.5e' % sat.orbit.b
+            print 'Angle:      %.5f' % sat.orbit.angle
+            print 'c:          %.5e' % sat.orbit.c
+            print 'e:          %.5f' % sat.orbit.e
+        
+    def OnShowHistoryBox(self, event):
+        #print 'OnShowHistoryBox'
+        self.canvas.Refresh()
+        
     def OnShowOrbitBox(self, event):
         #print 'OnShowOrbitBox'
         self.canvas.Refresh()
@@ -206,7 +230,7 @@ class Viewer(wx.Frame):
     def Run(self, steps):
         states = self.sim.step(steps)
         dc = wx.ClientDC(self.canvas)
-        if self.showOrbitBox.GetValue():
+        if self.showHistoryBox.GetValue():
             for state in states:
                 self.canvas.DrawState(dc, self, state)
             if self.sim_running:
@@ -284,7 +308,7 @@ class Canvas(wx.Panel):
                 dc.SetPen(wx.GREEN_PEN)
                 dc.SetBrush(wx.TRANSPARENT_BRUSH)
                 self.CircleW(dc, 0, 0, target_orbit)
-            if parent.showOrbitBox.GetValue():
+            if parent.showHistoryBox.GetValue():
                 for state in parent.sim.history:
                     try:
                         self.DrawState(dc, parent, state)
@@ -319,18 +343,23 @@ class Canvas(wx.Panel):
         print 'Set world size:', self.xw / EARTH_RADIUS, self.yw / EARTH_RADIUS, 'Scale = %.3e m/pxl' % scale
         
     def DrawState(self, dc, parent, state):
+        showHistory = parent.showHistoryBox.GetValue()
         showOrbit = parent.showOrbitBox.GetValue()
         dc.SetPen(wx.RED_PEN)
-        dc.SetBrush(wx.RED_BRUSH)
         for sat in state.satellites:
-            if showOrbit:
+            if showHistory:
                 self.PointW(dc, sat.sx, sat.sy)
             else:
+                if showOrbit and (sat.orbit is not None):
+                    dc.SetBrush(wx.TRANSPARENT_BRUSH)
+                    points = sat.orbit.points()
+                    dc.DrawPolygon([wx.Point(*self.PosP(*p)) for p in points])
                 x, y = self.PosP(sat.sx, sat.sy)
+                dc.SetBrush(wx.RED_BRUSH)
                 dc.DrawCircle(x, y, 3)
         dc.SetPen(wx.BLACK_PEN)
         dc.SetBrush(wx.BLACK_BRUSH)
-        if showOrbit:
+        if showHistory:
             self.PointW(dc, state.sx, state.sy)
         else:
             x, y = self.PosP(state.sx, state.sy)
