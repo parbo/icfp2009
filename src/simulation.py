@@ -50,13 +50,13 @@ class Simulation(object):
 
     @property
     def scenariotype(self):
-        if self.conf in [1001, 1002, 1003, 1004]:
+        if self.conf / 1000 == 1:
             return "Hohmann"
-        elif self.conf in [2001, 2002, 2003, 2004]:
+        elif self.conf / 1000 == 2:
             return "MeetAndGreet"
-        elif self.conf in [3001, 3002, 3003, 3004]:
+        elif self.conf / 1000 == 3:
             return "EccentricMeetAndGreet"
-        elif self.conf in [4001, 4002, 4003, 4004]:
+        elif self.conf / 1000 == 4:
             return "OperationClearSkies"
         
     def input(self):
@@ -70,8 +70,10 @@ class Simulation(object):
         sctype = self.scenariotype
         if sctype == "Hohmann":
             return State(time, vm, previous)
-        elif sctype == "MeetAndGreet":
+        elif sctype == "MeetAndGreet" or sctype == 'EccentricMeetAndGreet':
             return MeetAndGreetState(time, vm, previous)
+        elif sctype == 'OperationClearSkies':
+            return OpClearSkiesState(time, vm, previous)
         return State(time, vm, previous)
         
     def get_target_orbit(self):
@@ -151,6 +153,16 @@ class MeetAndGreetState(State):
         
     def satellite_ports(self, satellite_ix):
         return (4, 5)
+        
+class OpClearSkiesState(State):
+    def __init__(self, time=0, vm=None, previous=None):
+        State.__init__(self, time, vm, previous)
+        
+    def number_of_satellites(self):
+        return 12
+        
+    def satellite_ports(self, satellite_ix):
+        return (3 * satellite_ix + 7, 3 * satellite_ix + 8)
         
 class Satellite(object):
     def __init__(self, ref_sat, xport, yport, previous):
