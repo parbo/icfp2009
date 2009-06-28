@@ -65,10 +65,9 @@ class HohmannSim(Simulation):
 
     def init(self):
         if self.scenariotype == "Hohmann":
-            if self.state.sx and self.state.vx:
+            if self.state.s and self.state.v:
                 if False:
                     f = get_hohmann_score_func(self.state.radius, self.state.vm.output[4], self.initial_fuel)
-                    t = numpy.arange(self.state.radius, 10.0*max(self.state.radius, self.state.vm.output[4]), 5000.0)
                     g = lambda x: -f(x)
                     opt = scipy.optimize.fmin(g, self.state.vm.output[4])
                     print "Optimum intermediate transfer radius:", opt
@@ -79,7 +78,6 @@ class HohmannSim(Simulation):
                     self.transferradius = self.state.vm.output[4]
                     self.tb = TangentBurn(self.state.radius, self.transferradius, atx)
                 return HohmannSim.TRANSFER
-            return self.phase
         elif self.scenariotype == "MeetAndGreet":
             sat = self.state.satellites[0]
             if sat.radius:
@@ -89,12 +87,10 @@ class HohmannSim(Simulation):
 
     def catch_up(self):
         sat = self.state.satellites[0]
-        satpos = Vector(sat.sx, sat.sy)
-        pos = Vector(self.state.sx, self.state.sy)
-        phi = satpos.angle_signed(pos)
+        phi = sat.s.angle_signed(self.state.s)
         print self.dphi, phi
         print abs(self.dphi-phi)
-        if abs(self.dphi-phi) < 0.5 * abs(Vector(self.state.vx, self.state.vy))/self.state.radius:
+        if abs(self.dphi-phi) < 0.5 * abs(self.state.v)/self.state.radius:
             self.transferradius = sat.radius
             return HohmannSim.TRANSFER
         
@@ -109,6 +105,7 @@ class HohmannSim(Simulation):
             print "expected score:", score(self.h.dvt, self.initial_fuel, self.state.time+self.h.TOF+900)
             self.burntime = self.state.time
             self.vm.input[2], self.vm.input[3] = self.h.burn(self.state)
+        print abs(self.state.radius-self.transferradius)
         if abs(self.state.time-(self.burntime+self.h.TOF)) < 1:            
             return HohmannSim.INTERCEPT
 
@@ -131,10 +128,10 @@ class HohmannSim(Simulation):
         self.h = None
         if self.scenariotype == "Hohmann":
             print "Distance:", abs(self.state.radius-self.transferradius), self.state.radius, self.transferradius
-            if abs(self.state.radius-self.transferradius) > 1000.0:
+            if abs(self.state.radius-self.transferradius) > 500.0:
                 # didn't hit target, do a new transfer
                 return HohmannSim.TRANSFER
-            elif abs(self.transferradius-self.state.vm.output[4]) > 1000.0:
+            elif abs(self.transferradius-self.state.vm.output[4]) > 500.0:
                 # target hit, but were not at final target
                 self.transferradius = self.state.vm.output[4]
                 return HohmannSim.TRANSFER
@@ -143,19 +140,14 @@ class HohmannSim(Simulation):
     def target(self):
         if self.scenariotype != "Hohmann":
             sat = self.state.satellites[0]
-            satpos = Vector(sat.sx, sat.sy)
-            pos = Vector(self.state.sx, self.state.sy)
-            if abs(pos-satpos) > 1000.0:
+            if abs(self.state.s-sat.s) > 1000.0:
                 return HohmannSim.RENDEZ_VOUS
 
     def rendez_vous(self):
         if not self.h:
             sat = self.state.satellites[0]
-            satpos = Vector(sat.sx, sat.sy)
-            pos = Vector(self.state.sx, self.state.sy)
-            v = Vector(self.state.vx, self.state.vy)
-            d = satpos-pos            
-            phi = satpos.angle_signed(pos)
+            d = sat.s-self.state.s            
+            phi = sat.s.angle_signed(self.state.s)
 #            if d * v > 0.0:
             atx = calc_a_after(sat.radius, phi, 1)
 #            else:
@@ -165,7 +157,7 @@ class HohmannSim(Simulation):
             print self.h
             self.burntime = self.state.time
             self.vm.input[2], self.vm.input[3] = self.h.burn(self.state)
-        if abs(self.state.time-(self.burntime + 2.0 * self.h.TOF)) < 1:            
+        if abs(self.state.time-(self.burntime + 2.0 * self.h.TOF)) <= 1.0:            
             return HohmannSim.INTERCEPT
 
 def Create(problem, conf):

@@ -65,7 +65,10 @@ class Simulation(object):
         
     @property
     def completed(self):
-        return self.state.score != 0.0
+        c = self.state.score != 0.0
+        if c:
+            print "%.10f"%self.state.score
+        return c
         
     def create_state(self, time=0, vm=None, previous=None):
         sctype = self.scenariotype
@@ -95,9 +98,11 @@ class State(object):
         # Satellite position
         self.sx = None
         self.sy = None
+        self.s = None
         # Satellite velocity
         self.vx = None
         self.vy = None
+        self.v = None
         # Fuel
         self.current_fuel = None
         self.vm = vm
@@ -178,9 +183,11 @@ class Satellite(object):
         self.ry = None
         self.sx = None
         self.sy = None
+        self.s = None
         self.radius = None
         self.vx = None
         self.vy = None
+        self.v = None
         if (ref_sat.time > 0) and (ref_sat.vm is not None):
             self.rx = ref_sat.vm.output[xport]
             self.ry = ref_sat.vm.output[yport]

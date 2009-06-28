@@ -182,6 +182,7 @@ double readoutput(uint32_t port)
 void timestep()
 {
     uint32_t pc = 0;
+    volatile double tmp;
     for (pc = 0; pc < ADDRSPACESZ; ++pc)
     {
         uint32_t ins = g_instructions[pc];
@@ -194,15 +195,18 @@ void timestep()
             switch (op)
             {
                 case D_OP_ADD:
-                    g_data[pc] = g_data[r1] + g_data[r2];
+                    tmp = g_data[r1] + g_data[r2];
+                    g_data[pc] = tmp;
                     TRACE3(("%d D: ADD, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
                     break;
                 case D_OP_SUB:
-                    g_data[pc] = g_data[r1] - g_data[r2];
+                    tmp = g_data[r1] - g_data[r2];
+                    g_data[pc] = tmp;
                     TRACE3(("%d D: SUB, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
                     break;
                 case D_OP_MULT:
-                    g_data[pc] = g_data[r1] * g_data[r2];
+                    tmp = g_data[r1] * g_data[r2];
+                    g_data[pc] = tmp;
                     TRACE3(("%d D: MULT, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
                     break;
                 case D_OP_DIV:
@@ -212,7 +216,8 @@ void timestep()
                     }
                     else
                     {
-                        g_data[pc] = g_data[r1] / g_data[r2];
+                        tmp = g_data[r1] / g_data[r2];
+                        g_data[pc] = tmp;
                     }
                     TRACE3(("%d D: DIV, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
                     break;
@@ -269,7 +274,12 @@ void timestep()
                     }
                     break;
                 case S_OP_SQRT:
-                    g_data[pc] = abs(sqrt(g_data[r1]));
+                    {
+                        volatile double d = g_data[r1];
+                        volatile double s = sqrt(d);
+                        volatile double a = abs(s);
+                        g_data[pc] = a;
+                    }
                     TRACE3(("%d S: SQRT, %d, %d, %f, %f\n", pc, imm, r1, g_data[r1], g_data[pc]));
                     break;
                 case S_OP_COPY:
