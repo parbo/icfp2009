@@ -8,6 +8,12 @@ GMe = G * Me
 
 def sign(x):
     return 1.0 if x >= 0 else -1.0
+    
+def eccentric_anomaly(angle, e):
+    return math.acos((e + math.cos(angle)) / (1 + e * math.cos(angle)))
+    
+def mean_anomaly(E, e):
+    return E - e * math.sin(E)
 
 def create(vr, vv):
     """
@@ -52,6 +58,15 @@ class Ellipse(object):
     def orbit_period(self):
         return 2 * math.pi * math.sqrt(self.a ** 3 / GMe)
         
+    def time(self, start, end):
+        ''' Calculate time to travel from angle start to angle end. '''
+        # Ref: http://www.braeunig.us/space/problem.htm#4.11
+        E = eccentric_anomaly(end, self.e)
+        E0 = eccentric_anomaly(start, self.e)
+        M = mean_anomaly(E, self.e)
+        M0 = mean_anomaly(E0, self.e)
+        return (M - M0) * self.orbit_period() / (2 * math.pi)
+        
     def points(self, n=100):
         ang = [2 * k * math.pi / n for k in range(n)]
         p = [Vector(self.a * math.cos(w), self.b * math.sin(w)) for w in ang]
@@ -62,3 +77,5 @@ if __name__ == '__main__':
     print ellipse
     print 'c =', ellipse.c
     print 'e =', ellipse.e
+    print
+    print ellipse.time(0, math.pi / 4)
