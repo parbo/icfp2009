@@ -3,7 +3,7 @@ from mathutils import Hohmann, TangentBurn, get_hohmann_score_func
 from mathutils import score
 import math
 from vector import Vector
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import numpy
 import scipy.optimize
 
