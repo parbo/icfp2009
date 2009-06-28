@@ -48,7 +48,7 @@ class Simulation(object):
                 self.submission.add(self.time-1, pv)
                 
         self.history.extend(slist)
-        if len(self.history) > 100:
+        while len(self.history) > 5000:
             self.history.popleft()
         return slist
 
