@@ -1,8 +1,11 @@
 from simulation import Simulation, State, MeetAndGreetState, EARTH_RADIUS
-from mathutils import Hohmann, TangentBurn
+from mathutils import Hohmann, TangentBurn, get_hohmann_score_func
 from mathutils import score
 import math
 from vector import Vector
+import matplotlib.pyplot as plt
+import numpy
+import scipy.optimize
 
 def calc_phi(r, atx, m):
     return math.pi * (1.0 - (2.0 * m - 1.0) * ((atx / r ) ** (3.0/2.0)))
@@ -50,6 +53,14 @@ class HohmannSim(Simulation):
     def init(self):
         if self.scenariotype == "Hohmann":
             if self.state.sx and self.state.vx:
+                f = get_hohmann_score_func(self.state.radius, self.state.vm.output[4], self.initial_fuel)
+                t = numpy.arange(self.state.radius, 10.0*max(self.state.radius, self.state.vm.output[4]), 5000.0)
+                #plt.plot([f(x) for x in t])
+                #plt.show()
+                g = lambda x: -f(x)
+                opt = scipy.optimize.fmin(g, self.state.vm.output[4])
+                print "Optimum intermediate transfer radius:", opt
+                self.transferradius = opt[0]
                 return HohmannSim.TRANSFER
             return self.phase
         elif self.scenariotype == "MeetAndGreet":
@@ -67,12 +78,12 @@ class HohmannSim(Simulation):
         print self.dphi, phi
         print abs(self.dphi-phi)
         if abs(self.dphi-phi) < 0.5 * abs(Vector(self.state.vx, self.state.vy))/self.state.radius:
+            self.transferradius = sat.radius
             return HohmannSim.TRANSFER
         
     def transfer(self):
         if not self.h:
-            sat = self.state.satellites[0]
-            self.h = Hohmann(self.state.radius, sat.radius)
+            self.h = Hohmann(self.state.radius, self.transferradius)
             print self.h
             print "expected score:", score(self.h.dvt, self.initial_fuel, self.state.time+self.h.TOF+900)
             self.burntime = self.state.time
@@ -97,14 +108,20 @@ class HohmannSim(Simulation):
         self.vm.input[2] = dvbx
         self.vm.input[3] = dvby
         self.h = None
+        if self.scenariotype == "Hohmann":
+            print "Distance:", abs(self.transferradius-self.state.vm.output[4]), self.transferradius, self.state.vm.output[4]
+            if abs(self.transferradius-self.state.vm.output[4]) > 500.0:
+                self.transferradius = self.state.vm.output[4]
+                return HohmannSim.TRANSFER
         return HohmannSim.TARGET
         
     def target(self):
-        sat = self.state.satellites[0]
-        satpos = Vector(sat.sx, sat.sy)
-        pos = Vector(self.state.sx, self.state.sy)
-        if abs(pos-satpos) > 1000.0:
-            return HohmannSim.RENDEZ_VOUS
+        if self.scenariotype != "Hohmann":
+            sat = self.state.satellites[0]
+            satpos = Vector(sat.sx, sat.sy)
+            pos = Vector(self.state.sx, self.state.sy)
+            if abs(pos-satpos) > 1000.0:
+                return HohmannSim.RENDEZ_VOUS
 
     def rendez_vous(self):
         if not self.h:

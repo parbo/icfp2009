@@ -8,7 +8,19 @@ def clamp(val, minval, maxval):
     return max(min(val, maxval), minval)
 
 def score(frem, fstart, t):
-    return 25 + 45 * (frem/fstart) + (30 - math.log(t/1000, 2))
+    return 25.0 + 45.0 * (frem/fstart) + (30.0 - math.log(t/1000.0, 2.0))
+
+def hohmann_score(frem, fstart, t):
+    return 25.0 + 45.0 * (1.0-frem/fstart) + (30.0 - math.log(t/1000.0, 2.0))
+
+def get_hohmann_score_func(ra, rb, fuel):
+    def func(a):
+        if a > 3.0 * max(ra, rb):
+            return 0.0
+        h1 = Hohmann(ra, a)
+        h2 = Hohmann(a, rb)
+        return hohmann_score(h1.dvt+h2.dvt, fuel, h1.TOF+h2.TOF)
+    return func
 
 class OrbitTransfer(object):
     def __init__(self, ra, rb, atx):
@@ -89,6 +101,7 @@ if __name__=="__main__":
     print tb
     print
     print tb2
+
 
 
 
