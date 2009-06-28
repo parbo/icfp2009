@@ -351,14 +351,4 @@ void timestep()
             }
         }
     }
-    if (g_output[0] != 0.0)
-    {
-        int i = 0;
-        for (;i < 100; ++i)
-        {
-            printf("g_data[%d] = %g\n", i, g_data[i]);
-            printf("g_output[%d] = %g\n", i, g_output[i]);
-            printf("g_input[%d] = %g\n", i, g_input[i]);
-        }
-    }
 }

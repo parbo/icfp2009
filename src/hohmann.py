@@ -154,7 +154,7 @@ class HohmannSim(Simulation):
             sat = self.state.satellites[0]
             d = sat.s-self.state.s            
             phi = sat.s.angle_signed(self.state.s)
-#            if d * v > 0.0:
+#            if d * self.state.v > 0.0:
             atx = calc_a_after(sat.radius, phi, 1)
 #            else:
 #                atx = calc_a_before(sat.radius, phi, 1)
