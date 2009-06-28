@@ -1,6 +1,7 @@
 import math
 from vm.vm import VM
 from submission import Submission
+from vector import Vector
 
 # World constants.
 EARTH_RADIUS = 6.357e6 # [m]
@@ -57,7 +58,7 @@ class Simulation(object):
         elif self.conf / 1000 == 3:
             return "EccentricMeetAndGreet"
         elif self.conf / 1000 == 4:
-            return "OperationClearSkies"
+            return "OperationClearSkies"    
         
     def input(self):
         pass
@@ -69,7 +70,7 @@ class Simulation(object):
     def create_state(self, time=0, vm=None, previous=None):
         sctype = self.scenariotype
         if sctype == "Hohmann":
-            return State(time, vm, previous)
+            return HohmannState(time, vm, previous)
         elif sctype == "MeetAndGreet" or sctype == 'EccentricMeetAndGreet':
             return MeetAndGreetState(time, vm, previous)
         elif sctype == 'OperationClearSkies':
@@ -106,11 +107,14 @@ class State(object):
             self.current_fuel = vm.output[1]
             self.sx = vm.output[2]
             self.sy = vm.output[3]
+            self.s = Vector(self.sx, self.sy)
             self.radius = math.sqrt(self.sx ** 2 + self.sy ** 2)
             if previous is not None:
                 try:
                     self.vx = self.sx - previous.sx
                     self.vy = self.sy - previous.sy
+                    self.v = Vector(self.vx, self.vy)
+                    self.dir = self.s.cross(self.v)
                 except TypeError:
                     pass
         # Other satellites
@@ -144,6 +148,10 @@ class State(object):
             s.append(Satellite(self, xport, yport, prevsat))
         return s
         
+class HohmannState(State):
+    def __init__(self, time=0, vm=None, previous=None):
+        State.__init__(self, time, vm, previous)
+
 class MeetAndGreetState(State):
     def __init__(self, time=0, vm=None, previous=None):
         State.__init__(self, time, vm, previous)
@@ -178,10 +186,13 @@ class Satellite(object):
             self.ry = ref_sat.vm.output[yport]
             self.sx = ref_sat.sx - self.rx
             self.sy = ref_sat.sy - self.ry
+            self.s = Vector(self.sx, self.sy)
             self.radius = math.sqrt(self.sx ** 2 + self.sy ** 2)
             try:
                 self.vx = self.sx - previous.sx
                 self.vy = self.sy - previous.sy
+                self.v = Vector(self.vx, self.vy)
+                self.dir = self.s.cross(self.v)
             except TypeError:
                 pass
         

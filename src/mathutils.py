@@ -44,6 +44,19 @@ class OrbitTransfer(object):
         tmp.append("vtxb, velocity on transfer orbit at final orbit (point B): %f"%self.vtxb)
         return "\n".join(tmp)
 
+    def interceptburn(self, obj, wrongway=False):
+        print "intercept burn"
+        v = Vector(obj.vx, obj.vy)
+        vd = abs(self.vfb) * (Vector(obj.sy, -obj.sx).normalize())
+        if obj.dir > 0.0:
+            vd = -1.0 * vd
+        if wrongway:
+            vd = -1.0 * vd
+        dvb = v-vd
+        dvbx = dvb.x
+        dvby = dvb.y
+        return dvbx, dvby
+
 class Hohmann(OrbitTransfer):
     def __init__(self, ra, rb):
         self.atx = (ra+rb) / 2.0
@@ -53,23 +66,27 @@ class Hohmann(OrbitTransfer):
         self.dvt = self.dva + self.dvb
         self.TOF = math.pi * math.sqrt(((self.ra+self.rb)**3)/(8.0*G*Me))
 
-    def burn(self, sx, sy, vx, vy):
+    def burn(self, obj):
         print "Hohmann burn"
-        v = Vector(vx, vy)
+        v = Vector(obj.vx, obj.vy)
         d = v.normalize()
         dva = (d * self.dva) 
+#        if obj.dir > 0.0:
+#            dva = -1.0 * dva
         dvax = -dva.x
         dvay = -dva.y
         return dvax, dvay            
 
-    def interceptburn(self, sx, sy, vx, vy):
+    def interceptburn(self, obj, wrongway=False):
         print "Hohmann intercept burn"
-        v = Vector(vx, vy)
+        v = Vector(obj.vx, obj.vy)
         d = v.normalize()
         dvb = (d * self.dvb) 
+        if obj.dir > 0.0:
+            dvb = -1.0 * dvb
         dvbx = dvb.x
         dvby = dvb.y
-        return dvbx, dvby
+        return dvbx, dvby            
 
     def __str__(self):
         tmp = ["Hohmann orbital transfer"]
@@ -98,23 +115,14 @@ class TangentBurn(OrbitTransfer):
             self.E += math.pi
         self.TOF = (self.E - self.e * math.sin(self.E)) * math.sqrt(self.atx**3 / (G * Me))
 
-    def burn(self, sx, sy, vx, vy):
+    def burn(self, obj):
         print "one-tangent burn"
-        v = Vector(vx, vy)
+        v = Vector(obj.vx, obj.vy)
         d = v.normalize()
         dva = (d * self.dva) 
         dvax = -dva.x
         dvay = -dva.y
         return dvax, dvay            
-
-    def interceptburn(self, sx, sy, vx, vy):
-        print "one-tangent intercept burn"
-        v = Vector(vx, vy)
-        vd = abs(self.vfb) * (Vector(sy, -sx).normalize())
-        dvb = v-vd
-        dvbx = dvb.x
-        dvby = dvb.y
-        return dvbx, dvby
 
     def __str__(self):
         tmp = ["TangentBurn orbital transfer"]

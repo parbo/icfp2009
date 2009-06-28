@@ -48,10 +48,12 @@ class Vector(object):
     def angle(self, other):
         return math.acos(self * other / (abs(self) * abs(other)))
 
+    def cross(self, other):
+        return self.x * other.y - self.y * other.x
+
     def angle_signed(self, other):
         a = self.angle(other)
-        cross = self.x * other.y - self.y * other.x
-        if cross > 0.0:
+        if self.cross(other) > 0.0:
             return a
         return -a
 

@@ -108,20 +108,33 @@ class HohmannSim(Simulation):
             print self.h
             print "expected score:", score(self.h.dvt, self.initial_fuel, self.state.time+self.h.TOF+900)
             self.burntime = self.state.time
-            self.vm.input[2], self.vm.input[3] = self.h.burn(self.state.sx, self.state.sy, self.state.vx, self.state.vy)
+            self.vm.input[2], self.vm.input[3] = self.h.burn(self.state)
         if abs(self.state.time-(self.burntime+self.h.TOF)) < 1:            
             return HohmannSim.INTERCEPT
 
     def intercept(self):
         print "Intercept burn"
-        self.vm.input[2], self.vm.input[3] = self.h.interceptburn(self.state.sx, self.state.sy, self.state.vx, self.state.vy)
+        if self.scenariotype == "Hohmann":
+            tmp1x, tmp1y = self.h.interceptburn(self.state, False)
+            tmp2x, tmp2y = self.h.interceptburn(self.state, True)
+            dv1 = Vector(tmp1x, tmp1y)
+            dv2 = Vector(tmp2x, tmp2y)
+            adv1 = abs(dv1)
+            adv2 = abs(dv2)
+            dvx, dvy = dv1.x, dv1.y
+            if adv2 < self.state.current_fuel and adv2 > adv1:
+                dvx, dvy = dv2.x, dv2.y
+            self.vm.input[2], self.vm.input[3] = dvx, dvy
+        else:
+            self.vm.input[2], self.vm.input[3] = self.h.interceptburn(self.state)            
+
         self.h = None
         if self.scenariotype == "Hohmann":
             print "Distance:", abs(self.state.radius-self.transferradius), self.state.radius, self.transferradius
-            if abs(self.state.radius-self.transferradius) > 500.0:
+            if abs(self.state.radius-self.transferradius) > 1000.0:
                 # didn't hit target, do a new transfer
                 return HohmannSim.TRANSFER
-            elif abs(self.transferradius-self.state.vm.output[4]) > 500.0:
+            elif abs(self.transferradius-self.state.vm.output[4]) > 1000.0:
                 # target hit, but were not at final target
                 self.transferradius = self.state.vm.output[4]
                 return HohmannSim.TRANSFER
@@ -151,7 +164,7 @@ class HohmannSim(Simulation):
             self.h = Hohmann(sat.radius, 2.0 * atx - sat.radius)
             print self.h
             self.burntime = self.state.time
-            self.vm.input[2], self.vm.input[3] = self.h.burn(self.state.sx, self.state.sy, self.state.vx, self.state.vy)
+            self.vm.input[2], self.vm.input[3] = self.h.burn(self.state)
         if abs(self.state.time-(self.burntime + 2.0 * self.h.TOF)) < 1:            
             return HohmannSim.INTERCEPT
 
