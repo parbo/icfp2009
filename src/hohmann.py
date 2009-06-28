@@ -10,9 +10,7 @@ import scipy.optimize
 def calc_phi(r, atx, m):
     return math.pi * (1.0 - (2.0 * m - 1.0) * ((atx / r ) ** (3.0/2.0)))
 
-def calc_a_before(r, dphi, n):
-    return r * (((1.0 + (2.0 * math.pi - dphi) / (2.0 * math.pi * n)) ** 2.0) ** (1.0/3.0))
-def calc_a_after(r, dphi, n):
+def calc_a(r, dphi, n):
     return r * ((1.0 - dphi / (2.0 * math.pi * n)) ** (2.0/3.0))
 
 def genfunc(ra, rb, fuel, scorefunc):
@@ -88,8 +86,6 @@ class HohmannSim(Simulation):
     def catch_up(self):
         sat = self.state.satellites[0]
         phi = sat.s.angle_signed(self.state.s)
-        print self.dphi, phi
-        print abs(self.dphi-phi)
         if abs(self.dphi-phi) < 0.5 * abs(self.state.v)/self.state.radius:
             self.transferradius = sat.radius
             return HohmannSim.TRANSFER
@@ -104,8 +100,8 @@ class HohmannSim(Simulation):
             print self.h
             print "expected score:", score(self.h.dvt, self.initial_fuel, self.state.time+self.h.TOF+900)
             self.burntime = self.state.time
-            dvx, dvy = self.h.burn(self.state)
-            print "Burn:", dvx, dvy
+            dvx, dvy = self.h.burn(self.state.dir, self.state.s, self.state.v)
+            print "Burn:", dvx, dvy, self.state.v
             self.vm.input[2], self.vm.input[3] = dvx, dvy
             if dvx != self.vm.input[2]:
                 raise Exception
@@ -118,8 +114,8 @@ class HohmannSim(Simulation):
     def intercept(self):
         print "Intercept burn"
         if self.scenariotype == "Hohmann":
-            tmp1x, tmp1y = self.h.interceptburn(self.state, False)
-            tmp2x, tmp2y = self.h.interceptburn(self.state, True)
+            tmp1x, tmp1y = self.h.interceptburn(self.state.dir, self.state.s, self.state.v, False)
+            tmp2x, tmp2y = self.h.interceptburn(self.state.dir, self.state.s, self.state.v, True)
             dv1 = Vector(tmp1x, tmp1y)
             dv2 = Vector(tmp2x, tmp2y)
             adv1 = abs(dv1)
@@ -129,7 +125,7 @@ class HohmannSim(Simulation):
                 dvx, dvy = dv2.x, dv2.y
             self.vm.input[2], self.vm.input[3] = dvx, dvy
         else:
-            self.vm.input[2], self.vm.input[3] = self.h.interceptburn(self.state)            
+            self.vm.input[2], self.vm.input[3] = self.h.interceptburn(self.state.dir, self.state.s, self.state.v)            
 
         self.h = None
         if self.scenariotype == "Hohmann":
@@ -154,15 +150,15 @@ class HohmannSim(Simulation):
             sat = self.state.satellites[0]
             d = sat.s-self.state.s            
             phi = sat.s.angle_signed(self.state.s)
-#            if d * self.state.v > 0.0:
-            atx = calc_a_after(sat.radius, phi, 1)
-#            else:
-#                atx = calc_a_before(sat.radius, phi, 1)
+            atx = calc_a(sat.radius, phi, 1)
             print "Semi major axis:", atx
+            print "phi:", phi
             self.h = Hohmann(sat.radius, 2.0 * atx - sat.radius)
             print self.h
             self.burntime = self.state.time
-            self.vm.input[2], self.vm.input[3] = self.h.burn(self.state)
+            dvx, dvy = self.h.burn(self.state.dir, self.state.s, self.state.v)
+            print "Burn:", dvx, dvy, abs(Vector(dvx, dvy))
+            self.vm.input[2], self.vm.input[3] = dvx, dvy
         if abs(self.state.time-(self.burntime + 2.0 * self.h.TOF)) <= 1.0:            
             return HohmannSim.INTERCEPT
 

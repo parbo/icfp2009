@@ -328,6 +328,11 @@ class Canvas(wx.Panel):
             else:
                 x, y = self.PosP(sat.sx, sat.sy)
                 dc.DrawCircle(x, y, 3)
+                if sat.v:
+                    dc.SetPen(wx.BLACK_PEN)
+                    dc.SetBrush(wx.BLACK_BRUSH)
+                    v = abs(sat.v)
+                    dc.DrawLine(x, y, x + 20 * sat.vx / v, y + 20 * sat.vy / v)
         dc.SetPen(wx.BLACK_PEN)
         dc.SetBrush(wx.BLACK_BRUSH)
         if showOrbit:
@@ -335,6 +340,11 @@ class Canvas(wx.Panel):
         else:
             x, y = self.PosP(state.sx, state.sy)
             dc.DrawCircle(x, y, 3)
+            if state.v:
+                dc.SetPen(wx.BLACK_PEN)
+                dc.SetBrush(wx.BLACK_BRUSH)
+                v = abs(state.v)
+                dc.DrawLine(x, y, x + 20 * state.vx / v, y + 20 * state.vy / v)
         
     # Draw circle in world coordinates.
     def CircleW(self, dc, xw, yw, rw):
@@ -402,7 +412,7 @@ class ZoomWindow(wx.Frame):
             dc.SetBrush(wx.BLACK_BRUSH)
             x = self.xp / 2
             y = self.yp / 2
-            v = math.sqrt(state.vx ** 2 + state.vy ** 2)
+            v = abs(state.v)
             dc.DrawCircle(x, y, 3)
             dc.DrawLine(x, y, x + 20 * state.vx / v, y + 20 * state.vy / v)
         except TypeError:

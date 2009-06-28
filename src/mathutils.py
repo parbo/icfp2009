@@ -44,17 +44,16 @@ class OrbitTransfer(object):
         tmp.append("vtxb, velocity on transfer orbit at final orbit (point B): %f"%self.vtxb)
         return "\n".join(tmp)
 
-    def interceptburn(self, obj, wrongway=False):
+    def interceptburn(self, d, s, v, wrongway=False):
         print "intercept burn"
-        v = Vector(obj.vx, obj.vy)
-        vd = abs(self.vfb) * (Vector(obj.sy, -obj.sx).normalize())
-        if obj.dir > 0.0:
+        vd = abs(self.vfb) * (Vector(s.y, -s.x).normalize())
+        if d > 0.0:
             vd = -1.0 * vd
         if wrongway:
             vd = -1.0 * vd
         dvb = v-vd
-        dvbx = dvb.x
-        dvby = dvb.y
+        dvbx = -dvb.x
+        dvby = -dvb.y
         return dvbx, dvby
 
 class Hohmann(OrbitTransfer):
@@ -63,29 +62,23 @@ class Hohmann(OrbitTransfer):
         OrbitTransfer.__init__(self, ra, rb, self.atx)
         self.dva = self.vtxa-self.via        
         self.dvb = self.vfb-self.vtxb
-        self.dvt = self.dva + self.dvb
+        self.dvt = abs(self.dva) + abs(self.dvb)
         self.TOF = math.pi * math.sqrt(((self.ra+self.rb)**3)/(8.0*G*Me))
 
-    def burn(self, obj):
+    def burn(self, d, s, v):
         print "Hohmann burn"
-        v = Vector(obj.vx, obj.vy)
         d = v.normalize()
         dva = (d * self.dva) 
-#        if obj.dir > 0.0:
-#            dva = -1.0 * dva
         dvax = -dva.x
         dvay = -dva.y
         return dvax, dvay            
 
-    def interceptburn(self, obj, wrongway=False):
+    def interceptburn(self, d, s, v, wrongway=False):
         print "Hohmann intercept burn"
-        v = Vector(obj.vx, obj.vy)
         d = v.normalize()
         dvb = (d * self.dvb) 
-        if obj.dir > 0.0:
-            dvb = -1.0 * dvb
-        dvbx = dvb.x
-        dvby = dvb.y
+        dvbx = -dvb.x
+        dvby = -dvb.y
         return dvbx, dvby            
 
     def __str__(self):
@@ -107,7 +100,7 @@ class TangentBurn(OrbitTransfer):
         self.phi = math.atan(self.e * math.sin(self.ny) / (1.0 + self.e * math.cos(self.ny)))
         self.dva = self.vtxa-self.via        
         self.dvb = math.sqrt(self.vtxb**2 + self.vfb**2 - 2.0 * self.vtxb * self.vfb * math.cos(self.phi))
-        self.dvt = self.dva + self.dvb
+        self.dvt = abs(self.dva) + abs(self.dvb)
         tmp1 = math.sqrt(1.0 - self.e**2) * math.sin(self.ny)
         tmp2 = self.e + math.cos(self.ny)
         self.E = math.atan(tmp1 / tmp2)
@@ -115,9 +108,8 @@ class TangentBurn(OrbitTransfer):
             self.E += math.pi
         self.TOF = (self.E - self.e * math.sin(self.E)) * math.sqrt(self.atx**3 / (G * Me))
 
-    def burn(self, obj):
+    def burn(self, d, s, v):
         print "one-tangent burn"
-        v = Vector(obj.vx, obj.vy)
         d = v.normalize()
         dva = (d * self.dva) 
         dvax = -dva.x
