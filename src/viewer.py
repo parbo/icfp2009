@@ -274,9 +274,16 @@ class Canvas(wx.Panel):
     def OnPaint(self, event):
         #print 'Canvas.OnPaint'
         dc = wx.PaintDC(self)
+        dc.SetPen(wx.BLACK_PEN)
+        dc.SetBrush(wx.WHITE_BRUSH)
         self.CircleW(dc, 0, 0, EARTH_RADIUS)
         parent = self.GetParent()
         if parent.sim is not None:
+            target_orbit = parent.sim.get_target_orbit()
+            if target_orbit is not None:
+                dc.SetPen(wx.GREEN_PEN)
+                dc.SetBrush(wx.TRANSPARENT_BRUSH)
+                self.CircleW(dc, 0, 0, target_orbit)
             if parent.showOrbitBox.GetValue():
                 for state in parent.sim.history:
                     try:

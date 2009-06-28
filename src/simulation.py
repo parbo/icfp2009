@@ -73,6 +73,10 @@ class Simulation(object):
         elif sctype == "MeetAndGreet":
             return MeetAndGreetState(time, vm, previous)
         return State(time, vm, previous)
+        
+    def get_target_orbit(self):
+        ''' Return radius of circular orbit or None. '''
+        return None
     
     @property    
     def porthandles(self):
