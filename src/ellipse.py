@@ -77,9 +77,6 @@ if __name__ == '__main__':
     ellipse = create(2 * Re * Vector(1, 1).normalize(), 6000 * Vector(-1, 1).normalize())
     print ellipse
     print 'c =', ellipse.c
-<<<<<<< /home/parbo/source/icfp2009/src/ellipse.py
-    print 'e =', ellipse.e
-=======
     print 'e =', ellipse.e
     print
-    print ellipse.time(0, math.pi / 4)>>>>>>> /tmp/ellipse.py~other.5AJDnt
+    print ellipse.time(0, math.pi / 4)
