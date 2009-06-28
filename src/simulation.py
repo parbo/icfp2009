@@ -2,6 +2,7 @@ import math
 from vm.vm import VM
 from submission import Submission
 from vector import Vector
+from collections import deque
 
 # World constants.
 EARTH_RADIUS = 6.357e6 # [m]
@@ -18,7 +19,7 @@ class Simulation(object):
         # State
         self.time = 0
         self.state = self.create_state()
-        self.history = [self.state]
+        self.history = deque([self.state])
         # Fuel
         self.initial_fuel = None
         # Default world size.
@@ -44,9 +45,11 @@ class Simulation(object):
             if dvy != self.vm.input[3]:
                 pv.append((3, self.vm.input[3])) 
             if pv and not self.completed:
-                self.submission.add(self.time, pv)
+                self.submission.add(self.time-1, pv)
                 
         self.history.extend(slist)
+        if len(self.history) > 100:
+            self.history.popleft()
         return slist
 
     @property
@@ -106,7 +109,6 @@ class State(object):
         # Fuel
         self.current_fuel = None
         self.vm = vm
-        self.previous = previous
         if (time > 0) and (vm is not None):
             self.score = vm.output[0]
             self.current_fuel = vm.output[1]
