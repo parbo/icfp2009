@@ -66,7 +66,7 @@ class Ellipse(object):
         E0 = eccentric_anomaly(start, self.e)
         M = mean_anomaly(E, self.e)
         M0 = mean_anomaly(E0, self.e)
-        return (M - M0) * self.orbit_period() / (2 * math.pi)
+        return (M - M0) * self.orbit_period / (2 * math.pi)
         
     def points(self, n=100):
         ang = [2 * k * math.pi / n for k in range(n)]
