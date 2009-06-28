@@ -4,6 +4,7 @@ from vm.vm import VM
 from submission import Submission
 from vector import Vector
 from collections import deque
+import ellipse
 
 # World constants.
 EARTH_RADIUS = 6.357e6 # [m]
@@ -191,6 +192,7 @@ class Satellite(object):
         self.vx = None
         self.vy = None
         self.v = None
+        self.orbit = None
         if (ref_sat.time > 0) and (ref_sat.vm is not None):
             self.rx = ref_sat.vm.output[xport]
             self.ry = ref_sat.vm.output[yport]
@@ -203,6 +205,10 @@ class Satellite(object):
                 self.vy = self.sy - previous.sy
                 self.v = Vector(self.vx, self.vy)
                 self.dir = self.s.cross(self.v)
+                try:
+                    self.orbit = ellipse.create(self.s, self.v)
+                except ValueError:
+                    self.orbit = None
             except TypeError:
                 pass
         
