@@ -58,7 +58,12 @@ class Vector(object):
         return -a
 
     def point(self):
-        return (self.x, self.y)           
+        return (self.x, self.y)
+        
+    def direction(self):
+        ''' Direction d: -pi < d <= pi '''
+        a = math.acos(self.x / abs(self))
+        return a if self.y >= 0.0 else -a
 
 ITYPE_ENTER = 0
 ITYPE_EXIT = 1
@@ -95,10 +100,18 @@ if __name__ == '__main__':
     v2 = Vector(4, 5)
     v3 = Vector(1, 0)
     v4 = Vector(1, 1)
+    v5 = Vector(0, 1)
+    v6 = Vector(-1, 0)
+    v7 = Vector(0, -1)
+    v8 = Vector(1, -1)
     print 'v1 =', v1
     print 'v2 =', v2
     print 'v3 =', v3
     print 'v4 =', v4
+    print 'v5 =', v5
+    print 'v6 =', v6
+    print 'v7 =', v7
+    print 'v8 =', v8
     print 'v1 + v2 =', v1 + v2
     print 'v1 - v2 =', v1 - v2
     print 'v1 * v2 =', v1 * v2
@@ -112,3 +125,9 @@ if __name__ == '__main__':
     print 'v3.rotate(-pi / 4) =', v3.rotate(-math.pi / 4)
     print 'v3.angle(v4) =', v3.angle(v4)
     print 'v4.angle(v3) =', v4.angle(v3)
+    print 'v3.direction() =', v3.direction()
+    print 'v4.direction() =', v4.direction()
+    print 'v5.direction() =', v5.direction()
+    print 'v6.direction() =', v6.direction()
+    print 'v7.direction() =', v7.direction()
+    print 'v8.direction() =', v8.direction()
