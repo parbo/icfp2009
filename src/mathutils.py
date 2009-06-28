@@ -1,4 +1,5 @@
 import math 
+from vector import Vector
 
 G = 6.67428e-11
 Rj = 6.357e6
@@ -15,11 +16,11 @@ def hohmann_score(frem, fstart, t):
 
 def get_hohmann_score_func(ra, rb, fuel):
     def func(a):
-        if a > 3.0 * max(ra, rb):
-            return 0.0
+#        if a > 3.0 * max(ra, rb):
+#            return 0.0
         h1 = Hohmann(ra, a)
         h2 = Hohmann(a, rb)
-        return hohmann_score(h1.dvt+h2.dvt, fuel, h1.TOF+h2.TOF)
+        return hohmann_score(fuel-h1.dvt+h2.dvt, fuel, h1.TOF+h2.TOF+900)
     return func
 
 class OrbitTransfer(object):
@@ -52,6 +53,24 @@ class Hohmann(OrbitTransfer):
         self.dvt = self.dva + self.dvb
         self.TOF = math.pi * math.sqrt(((self.ra+self.rb)**3)/(8.0*G*Me))
 
+    def burn(self, sx, sy, vx, vy):
+        print "Hohmann burn"
+        v = Vector(vx, vy)
+        d = v.normalize()
+        dva = (d * self.dva) 
+        dvax = -dva.x
+        dvay = -dva.y
+        return dvax, dvay            
+
+    def interceptburn(self, sx, sy, vx, vy):
+        print "Hohmann intercept burn"
+        v = Vector(vx, vy)
+        d = v.normalize()
+        dvb = (d * self.dvb) 
+        dvbx = dvb.x
+        dvby = dvb.y
+        return dvbx, dvby
+
     def __str__(self):
         tmp = ["Hohmann orbital transfer"]
         tmp.append(OrbitTransfer.__str__(self))
@@ -78,6 +97,24 @@ class TangentBurn(OrbitTransfer):
         while self.E < 0.0:
             self.E += math.pi
         self.TOF = (self.E - self.e * math.sin(self.E)) * math.sqrt(self.atx**3 / (G * Me))
+
+    def burn(self, sx, sy, vx, vy):
+        print "one-tangent burn"
+        v = Vector(vx, vy)
+        d = v.normalize()
+        dva = (d * self.dva) 
+        dvax = -dva.x
+        dvay = -dva.y
+        return dvax, dvay            
+
+    def interceptburn(self, sx, sy, vx, vy):
+        print "one-tangent intercept burn"
+        v = Vector(vx, vy)
+        vd = abs(self.vfb) * (Vector(sy, -sx).normalize())
+        dvb = v-vd
+        dvbx = dvb.x
+        dvby = dvb.y
+        return dvbx, dvby
 
     def __str__(self):
         tmp = ["TangentBurn orbital transfer"]

@@ -1,5 +1,5 @@
 from simulation import Simulation, State, MeetAndGreetState, EARTH_RADIUS
-from mathutils import Hohmann, TangentBurn, get_hohmann_score_func
+from mathutils import Hohmann, TangentBurn, get_hohmann_score_func, score, hohmann_score
 from mathutils import score
 import math
 from vector import Vector
@@ -15,6 +15,15 @@ def calc_a_before(r, dphi, n):
 def calc_a_after(r, dphi, n):
     return r * ((1.0 - dphi / (2.0 * math.pi * n)) ** (2.0/3.0))
 
+def genfunc(ra, rb, fuel, scorefunc):
+    def myfunc(atx):
+        if atx < ra or atx > rb:
+            return 0.0
+        tb = TangentBurn(ra, rb, atx)
+        sc = scorefunc(fuel-tb.dvt, fuel, tb.TOF+900)
+        return -sc
+    return myfunc
+
 class HohmannSim(Simulation):
     INIT = 0
     CATCH_UP = 1
@@ -26,10 +35,14 @@ class HohmannSim(Simulation):
     def __init__(self, problem=None, conf=None):
         Simulation.__init__(self, problem, conf, 'Hohmann transfer simulation')        
         self.h = None
+        self.tb = None
         self.phase = HohmannSim.INIT
         self.burntime = 0
         self.dphi = None
         self.transferradius = 0.0
+
+    def get_target_orbit(self):
+        return self.transferradius
 
     def input(self):
         self.vm.input[2] = 0.0
@@ -53,14 +66,18 @@ class HohmannSim(Simulation):
     def init(self):
         if self.scenariotype == "Hohmann":
             if self.state.sx and self.state.vx:
-                f = get_hohmann_score_func(self.state.radius, self.state.vm.output[4], self.initial_fuel)
-                t = numpy.arange(self.state.radius, 10.0*max(self.state.radius, self.state.vm.output[4]), 5000.0)
-                #plt.plot([f(x) for x in t])
-                #plt.show()
-                g = lambda x: -f(x)
-                opt = scipy.optimize.fmin(g, self.state.vm.output[4])
-                print "Optimum intermediate transfer radius:", opt
-                self.transferradius = opt[0]
+                if False:
+                    f = get_hohmann_score_func(self.state.radius, self.state.vm.output[4], self.initial_fuel)
+                    t = numpy.arange(self.state.radius, 10.0*max(self.state.radius, self.state.vm.output[4]), 5000.0)
+                    g = lambda x: -f(x)
+                    opt = scipy.optimize.fmin(g, self.state.vm.output[4])
+                    print "Optimum intermediate transfer radius:", opt
+                    self.transferradius = opt[0]
+                else:
+                    atx = scipy.optimize.fmin(genfunc(self.state.radius, self.state.vm.output[4], self.initial_fuel, hohmann_score), 3.0 * (self.state.radius+self.state.vm.output[4]) / 4.0)                   
+                    print atx
+                    self.transferradius = self.state.vm.output[4]
+                    self.tb = TangentBurn(self.state.radius, self.transferradius, atx)
                 return HohmannSim.TRANSFER
             return self.phase
         elif self.scenariotype == "MeetAndGreet":
@@ -83,34 +100,29 @@ class HohmannSim(Simulation):
         
     def transfer(self):
         if not self.h:
-            self.h = Hohmann(self.state.radius, self.transferradius)
+            if self.tb:
+                self.h = self.tb
+                self.tb = None
+            else:
+                self.h = Hohmann(self.state.radius, self.transferradius)
             print self.h
             print "expected score:", score(self.h.dvt, self.initial_fuel, self.state.time+self.h.TOF+900)
             self.burntime = self.state.time
-            v = Vector(self.state.vx, self.state.vy)
-            d = v.normalize()
-            dva = (d * self.h.dva) 
-            dvax = -dva.x
-            dvay = -dva.y
-            print d, dva, dvax, dvay
-            self.vm.input[2] = dvax
-            self.vm.input[3] = dvay
+            self.vm.input[2], self.vm.input[3] = self.h.burn(self.state.sx, self.state.sy, self.state.vx, self.state.vy)
         if abs(self.state.time-(self.burntime+self.h.TOF)) < 1:            
             return HohmannSim.INTERCEPT
 
     def intercept(self):
-        v = Vector(self.state.vx, self.state.vy)
-        d = v.normalize()
-        dvb = (d * self.h.dvb) 
-        dvbx = -dvb.x
-        dvby = -dvb.y
-        print d, dvb, dvbx, dvby
-        self.vm.input[2] = dvbx
-        self.vm.input[3] = dvby
+        print "Intercept burn"
+        self.vm.input[2], self.vm.input[3] = self.h.interceptburn(self.state.sx, self.state.sy, self.state.vx, self.state.vy)
         self.h = None
         if self.scenariotype == "Hohmann":
-            print "Distance:", abs(self.transferradius-self.state.vm.output[4]), self.transferradius, self.state.vm.output[4]
-            if abs(self.transferradius-self.state.vm.output[4]) > 500.0:
+            print "Distance:", abs(self.state.radius-self.transferradius), self.state.radius, self.transferradius
+            if abs(self.state.radius-self.transferradius) > 500.0:
+                # didn't hit target, do a new transfer
+                return HohmannSim.TRANSFER
+            elif abs(self.transferradius-self.state.vm.output[4]) > 500.0:
+                # target hit, but were not at final target
                 self.transferradius = self.state.vm.output[4]
                 return HohmannSim.TRANSFER
         return HohmannSim.TARGET
@@ -139,14 +151,7 @@ class HohmannSim(Simulation):
             self.h = Hohmann(sat.radius, 2.0 * atx - sat.radius)
             print self.h
             self.burntime = self.state.time
-            v = Vector(self.state.vx, self.state.vy)
-            d = v.normalize()
-            dva = (d * self.h.dva) 
-            dvax = -dva.x
-            dvay = -dva.y
-            print d, dva, dvax, dvay
-            self.vm.input[2] = dvax
-            self.vm.input[3] = dvay
+            self.vm.input[2], self.vm.input[3] = self.h.burn(self.state.sx, self.state.sy, self.state.vx, self.state.vy)
         if abs(self.state.time-(self.burntime + 2.0 * self.h.TOF)) < 1:            
             return HohmannSim.INTERCEPT
 
