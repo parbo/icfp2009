@@ -1,5 +1,6 @@
 import math
 from vm.vm import VM
+#from pyvm import VM
 from submission import Submission
 from vector import Vector
 from collections import deque
@@ -28,7 +29,6 @@ class Simulation(object):
     def step(self, n=1):
         slist = []
         for t in range(n):
-            self.time += 1
             self.vm.step()
             if self.completed:
                 break
@@ -40,12 +40,13 @@ class Simulation(object):
             dvy = self.vm.input[3]
             self.input()
             pv = []
+            self.time += 1
             if dvx != self.vm.input[2]:
                 pv.append((2, self.vm.input[2])) 
             if dvy != self.vm.input[3]:
                 pv.append((3, self.vm.input[3])) 
             if pv and not self.completed:
-                self.submission.add(self.time-1, pv)
+                self.submission.add(self.time, pv)
                 
         self.history.extend(slist)
         if len(self.history) > 100:

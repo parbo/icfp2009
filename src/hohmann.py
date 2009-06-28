@@ -104,8 +104,14 @@ class HohmannSim(Simulation):
             print self.h
             print "expected score:", score(self.h.dvt, self.initial_fuel, self.state.time+self.h.TOF+900)
             self.burntime = self.state.time
-            self.vm.input[2], self.vm.input[3] = self.h.burn(self.state)
-        print abs(self.state.radius-self.transferradius)
+            dvx, dvy = self.h.burn(self.state)
+            print "Burn:", dvx, dvy
+            self.vm.input[2], self.vm.input[3] = dvx, dvy
+            if dvx != self.vm.input[2]:
+                raise Exception
+            if dvy != self.vm.input[3]:
+                raise Exception
+
         if abs(self.state.time-(self.burntime+self.h.TOF)) < 1:            
             return HohmannSim.INTERCEPT
 
@@ -127,7 +133,7 @@ class HohmannSim(Simulation):
 
         self.h = None
         if self.scenariotype == "Hohmann":
-            print "Distance:", abs(self.state.radius-self.transferradius), self.state.radius, self.transferradius
+#            print "Distance:", abs(self.state.radius-self.transferradius), self.state.radius, self.transferradius
             if abs(self.state.radius-self.transferradius) > 500.0:
                 # didn't hit target, do a new transfer
                 return HohmannSim.TRANSFER

@@ -67,11 +67,11 @@ typedef enum _CMPZ_opcodes
 #define TRACE2(x) TRACE(2, x)
 #define TRACE3(x) TRACE(3, x)
 
-uint32_t g_status = 0;
-double g_data[ADDRSPACESZ];
-uint32_t g_instructions[ADDRSPACESZ];
-double g_input[ADDRSPACESZ];
-double g_output[ADDRSPACESZ];
+volatile uint32_t g_status = 0;
+volatile double g_data[ADDRSPACESZ];
+volatile uint32_t g_instructions[ADDRSPACESZ];
+volatile double g_input[ADDRSPACESZ];
+volatile double g_output[ADDRSPACESZ];
 
 int g_dbglvl = 0;
 
@@ -143,6 +143,10 @@ void writeinput(uint32_t port, double val)
 {
     if (port >= 0 && port < ADDRSPACESZ)
     {
+        if (val != g_input[port])
+        {
+            TRACE1(("write port: %d, val %.20f\n", port, val));
+        }
         g_input[port] = val;
     }
     else
@@ -183,6 +187,8 @@ void timestep()
 {
     uint32_t pc = 0;
     volatile double tmp;
+    volatile double d1;
+    volatile double d2;
     for (pc = 0; pc < ADDRSPACESZ; ++pc)
     {
         uint32_t ins = g_instructions[pc];
@@ -195,17 +201,23 @@ void timestep()
             switch (op)
             {
                 case D_OP_ADD:
-                    tmp = g_data[r1] + g_data[r2];
+                    d1 = g_data[r1];
+                    d2 = g_data[r2];
+                    tmp = d1 + d2;
                     g_data[pc] = tmp;
                     TRACE3(("%d D: ADD, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
                     break;
                 case D_OP_SUB:
-                    tmp = g_data[r1] - g_data[r2];
+                    d1 = g_data[r1];
+                    d2 = g_data[r2];
+                    tmp = d1-d2;
                     g_data[pc] = tmp;
                     TRACE3(("%d D: SUB, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
                     break;
                 case D_OP_MULT:
-                    tmp = g_data[r1] * g_data[r2];
+                    d1 = g_data[r1];
+                    d2 = g_data[r2];
+                    tmp = d1*d2;
                     g_data[pc] = tmp;
                     TRACE3(("%d D: MULT, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
                     break;
@@ -216,7 +228,9 @@ void timestep()
                     }
                     else
                     {
-                        tmp = g_data[r1] / g_data[r2];
+                        d1 = g_data[r1];
+                        d2 = g_data[r2];
+                        tmp = d1 / d2;
                         g_data[pc] = tmp;
                     }
                     TRACE3(("%d D: DIV, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
@@ -226,7 +240,14 @@ void timestep()
                     TRACE3(("%d D: OUTPUT, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_output[r1]));
                     break;
                 case D_OP_PHI:
-                    g_data[pc] = g_status ? g_data[r1] : g_data[r2];
+                    if (g_status)
+                    {
+                        g_data[pc] = g_data[r1];
+                    }
+                    else
+                    {
+                        g_data[pc] = g_data[r2];
+                    }
                     TRACE3(("%d D: PHI, %d, %d, %f, %f, %f, %d\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc], g_status));
                     break;
                 default:
@@ -249,23 +270,58 @@ void timestep()
                         switch (imm)
                         {
                             case CMPZ_OP_LTZ:
-                                g_status = (g_data[r1] < 0.0) ? 1 : 0;
+                                if (g_data[r1] < 0.0)
+                                {
+                                    g_status = 1;
+                                }
+                                else
+                                {
+                                    g_status = 0;
+                                }
                                 TRACE3(("%d S: CMPZ <, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
                                 break;
                             case CMPZ_OP_LEZ:
-                                g_status = (g_data[r1] <= 0.0) ? 1 : 0;
+                                if (g_data[r1] <= 0.0)
+                                {
+                                    g_status = 1;
+                                }
+                                else
+                                {
+                                    g_status = 0;
+                                }
                                 TRACE3(("%d S: CMPZ <=, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
                                 break;
                             case CMPZ_OP_EQZ:
-                                g_status = (g_data[r1] == 0.0) ? 1 : 0;
+                                if (g_data[r1] == 0.0)
+                                {
+                                    g_status = 1;
+                                }
+                                else
+                                {
+                                    g_status = 0;
+                                }
                                 TRACE3(("%d S: CMPZ ==, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
                                 break;
                             case CMPZ_OP_GEZ:
-                                g_status = (g_data[r1] >= 0.0) ? 1 : 0;
+                                if (g_data[r1] >= 0.0)
+                                {
+                                    g_status = 1;
+                                }
+                                else
+                                {
+                                    g_status = 0;
+                                }
                                 TRACE3(("%d S: CMPZ >=, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
                                 break;
                             case CMPZ_OP_GTZ:
-                                g_status = (g_data[r1] > 0.0) ? 1 : 0;
+                                if (g_data[r1] > 0.0)
+                                {
+                                    g_status = 1;
+                                }
+                                else
+                                {
+                                    g_status = 0;
+                                }
                                 TRACE3(("%d S: CMPZ >, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
                                 break;
                             default:
@@ -277,8 +333,8 @@ void timestep()
                     {
                         volatile double d = g_data[r1];
                         volatile double s = sqrt(d);
-                        volatile double a = abs(s);
-                        g_data[pc] = a;
+//                        volatile double a = abs(s);
+                        g_data[pc] = s;
                     }
                     TRACE3(("%d S: SQRT, %d, %d, %f, %f\n", pc, imm, r1, g_data[r1], g_data[pc]));
                     break;
@@ -293,6 +349,16 @@ void timestep()
                 default:
                     TRACE1(("Error: invalid OP %d\n", op));
             }
+        }
+    }
+    if (g_output[0] != 0.0)
+    {
+        int i = 0;
+        for (;i < 100; ++i)
+        {
+            printf("g_data[%d] = %g\n", i, g_data[i]);
+            printf("g_output[%d] = %g\n", i, g_output[i]);
+            printf("g_input[%d] = %g\n", i, g_input[i]);
         }
     }
 }
