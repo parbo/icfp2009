@@ -9,19 +9,10 @@ def clamp(val, minval, maxval):
     return max(min(val, maxval), minval)
 
 def score(frem, fstart, t):
-    return 25.0 + 45.0 * (frem/fstart) + (30.0 - int(math.log(t/1000.0, 2.0)))
+    return 25.0 + 45.0 * (frem/fstart) + (30.0 - math.log(t/1000.0, 2.0))
 
 def hohmann_score(frem, fstart, t):
-    return 25.0 + 45.0 * ((fstart-frem)/fstart) + (30.0 - int(math.log(t/1000.0, 2.0)))
-
-def get_hohmann_score_func(ra, rb, fuel):
-    def func(a):
-#        if a > 3.0 * max(ra, rb):
-#            return 0.0
-        h1 = Hohmann(ra, a)
-        h2 = Hohmann(a, rb)
-        return hohmann_score(fuel-h1.dvt+h2.dvt, fuel, h1.TOF+h2.TOF+900)
-    return func
+    return 25.0 + 45.0 * ((fstart-frem)/fstart) + (30.0 - math.log(t/1000.0, 2.0))
 
 class OrbitTransfer(object):
     def __init__(self, ra, rb, atx):
@@ -45,13 +36,12 @@ class OrbitTransfer(object):
         return "\n".join(tmp)
 
     def interceptburn(self, d, s, v, wrongway=False):
-        print "intercept burn"
-        vd = abs(self.vfb) * (Vector(s.y, -s.x).normalize())
+        vd = self.vfb * (Vector(s.y, -s.x).normalize())
         if d > 0.0:
             vd = -1.0 * vd
         if wrongway:
             vd = -1.0 * vd
-        dvb = v-vd
+        dvb = vd-v
         dvbx = -dvb.x
         dvby = -dvb.y
         return dvbx, dvby
@@ -66,7 +56,6 @@ class Hohmann(OrbitTransfer):
         self.TOF = math.pi * math.sqrt(((self.ra+self.rb)**3)/(8.0*G*Me))
 
     def burn(self, d, s, v):
-        print "Hohmann burn"
         d = v.normalize()
         dva = (d * self.dva) 
         dvax = -dva.x
@@ -74,7 +63,6 @@ class Hohmann(OrbitTransfer):
         return dvax, dvay            
 
     def interceptburn(self, d, s, v, wrongway=False):
-        print "Hohmann intercept burn"
         d = v.normalize()
         dvb = (d * self.dvb) 
         dvbx = -dvb.x
@@ -109,7 +97,6 @@ class TangentBurn(OrbitTransfer):
         self.TOF = (self.E - self.e * math.sin(self.E)) * math.sqrt(self.atx**3 / (G * Me))
 
     def burn(self, d, s, v):
-        print "one-tangent burn"
         d = v.normalize()
         dva = (d * self.dva) 
         dvax = -dva.x

@@ -124,6 +124,10 @@ class State(object):
                     self.vy = self.sy - previous.sy
                     self.v = Vector(self.vx, self.vy)
                     self.dir = self.s.cross(self.v)
+                    try:
+                        self.orbit = ellipse.create(self.s, self.v)
+                    except ValueError:
+                        self.orbit = None
                 except TypeError:
                     pass
         # Other satellites

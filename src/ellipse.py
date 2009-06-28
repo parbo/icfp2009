@@ -55,6 +55,7 @@ class Ellipse(object):
     def __str__(self):
         return 'Ellipse(%f, %f, %f, %f, %f)' % (self.x, self.y, self.a, self.b, self.angle)
         
+    @property
     def orbit_period(self):
         return 2 * math.pi * math.sqrt(self.a ** 3 / GMe)
         
@@ -76,6 +77,9 @@ if __name__ == '__main__':
     ellipse = create(2 * Re * Vector(1, 1).normalize(), 6000 * Vector(-1, 1).normalize())
     print ellipse
     print 'c =', ellipse.c
+<<<<<<< /home/parbo/source/icfp2009/src/ellipse.py
+    print 'e =', ellipse.e
+=======
     print 'e =', ellipse.e
     print
-    print ellipse.time(0, math.pi / 4)
+    print ellipse.time(0, math.pi / 4)>>>>>>> /tmp/ellipse.py~other.5AJDnt

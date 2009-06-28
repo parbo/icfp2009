@@ -367,6 +367,10 @@ class Canvas(wx.Panel):
         if showHistory:
             self.PointW(dc, state.sx, state.sy)
         else:
+            if showOrbit and (state.orbit is not None):
+                dc.SetBrush(wx.TRANSPARENT_BRUSH)
+                points = state.orbit.points()
+                dc.DrawPolygon([wx.Point(*self.PosP(*p)) for p in points])
             x, y = self.PosP(state.sx, state.sy)
             dc.DrawCircle(x, y, 3)
             if state.v:
