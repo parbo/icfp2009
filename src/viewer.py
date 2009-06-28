@@ -34,7 +34,7 @@ class Viewer(wx.Frame):
         self.SetBackgroundColour(wx.LIGHT_GREY)
         self.SetMinSize((500, 300))
         # Zoom window
-        self.zoomWindow = ZoomWindow(self, 1e5)
+        self.zoomWindow = ZoomWindow(self, 5e4)
         self.zoomWindow.Move((1020, 10))
         # Child control initializations.
         self.controlInput = wx.TextCtrl(self, -1, controller)
@@ -117,28 +117,28 @@ class Viewer(wx.Frame):
     
     # Event handlers.
     def OnControlSelectBtn(self, event):
-        print 'OnControlSelectBtn'
+        #print 'OnControlSelectBtn'
         dlg = wx.FileDialog(self, 'Open controller file', wildcard = 'Controller (*.py)|*.py', style = wx.OPEN | wx.FILE_MUST_EXIST | wx.CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             self.controlInput.SetValue(dlg.GetPath())
         dlg.Destroy()
         
     def OnProblemSelectBtn(self, event):
-        print 'OnProblemSelectBtn'
+        #print 'OnProblemSelectBtn'
         dlg = wx.FileDialog(self, 'Open problem file', wildcard = 'Problem (*.obf)|*.obf', style = wx.OPEN | wx.FILE_MUST_EXIST | wx.CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             self.problemInput.SetValue(dlg.GetPath())
         dlg.Destroy()
         
     def OnOutfileSelectBtn(self, event):
-        print 'OnOutfileSelectBtn'
+        #print 'OnOutfileSelectBtn'
         dlg = wx.FileDialog(self, 'Select output file', wildcard = 'Output file (*.osf)|*.osf', style = wx.OPEN | wx.CHANGE_DIR)
         if dlg.ShowModal() == wx.ID_OK:
             self.outfileInput.SetValue(dlg.GetPath())
         dlg.Destroy()
         
     def OnWriteBtn(self, event):
-        print 'OnWriteBtn'
+        #print 'OnWriteBtn'
         filename = self.outfileInput.GetValue()
         if filename != '':
             f = open(filename, 'wb')
@@ -146,7 +146,7 @@ class Viewer(wx.Frame):
             f.close()
         
     def OnLoadBtn(self, event):
-        print 'OnLoadBtn'
+        #print 'OnLoadBtn'
         self.writeBtn.Disable()
         controller_path = self.controlInput.GetValue()
         problem = self.problemInput.GetValue()
@@ -162,11 +162,11 @@ class Viewer(wx.Frame):
         self.UpdateStatusBar()
         
     def OnStepBtn(self, event):
-        print 'OnStepBtn'
+        #print 'OnStepBtn'
         self.Run(int(self.stepInput.GetValue()))
         
     def OnRunBtn(self, event):
-        print 'OnRunBtn'
+        #print 'OnRunBtn'
         if self.sim_running:
             self.sim_running = False
             self.runBtn.SetLabel('Run')
@@ -176,30 +176,30 @@ class Viewer(wx.Frame):
             self.AddPendingEvent(RunSimEvent(id=ID_RUN_EVENT))
             
     def OnZoomInBtn(self, event):
-        print 'OnZoomInBtn'
+        #print 'OnZoomInBtn'
         self.canvas.Zoom(2.0 / 3.0)
         
     def OnZoomOutBtn(self, event):
-        print 'OnZoomOutBtn'
+        #print 'OnZoomOutBtn'
         self.canvas.Zoom(1.5)
         
     def OnShowOrbitBox(self, event):
-        print 'OnShowOrbitBox'
+        #print 'OnShowOrbitBox'
         self.canvas.Refresh()
         
     def OnShowZoomBox(self, event):
-        print 'OnShowZoomBox'
+        #print 'OnShowZoomBox'
         if self.showZoomBox.GetValue():
             self.zoomWindow.Show()
         else:
             self.zoomWindow.Hide()
         
     def OnRunEvent(self, event):
-        print 'OnRunEvent'
+        #print 'OnRunEvent'
         self.Run(int(self.stepInput.GetValue()))
         
     def OnClose(self, event):
-        print 'OnClose'
+        #print 'OnClose'
         self.zoomWindow.Destroy()
         self.Destroy()
         
@@ -265,14 +265,14 @@ class Canvas(wx.Panel):
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         
     def OnSize(self, event):
-        print 'Canvas.OnSize'
+        #print 'Canvas.OnSize'
         size = self.GetClientSize()
         self.xp = size.x
         self.yp = size.y
         self.UpdateWorldSize()
         
     def OnPaint(self, event):
-        print 'Canvas.OnPaint'
+        #print 'Canvas.OnPaint'
         dc = wx.PaintDC(self)
         self.CircleW(dc, 0, 0, EARTH_RADIUS)
         parent = self.GetParent()
@@ -364,22 +364,22 @@ class ZoomWindow(wx.Frame):
         self.yp = 200
         # Status bar.
         self.CreateStatusBar(2)
+        # Distance to closest satellite.
+        self.dist = 1e7
         # Event handlers.
         self.Bind(wx.EVT_SIZE, self.OnSize)
         self.Bind(wx.EVT_PAINT, self.OnPaint)
         
     def OnSize(self, event):
-        print 'Zoom.OnSize'
-        size = self.GetClientSize()
-        self.xp = size.x
-        self.yp = size.y
-        self.UpdateWorldSize()
+        #print 'Zoom.OnSize'
+        self.SetWorldSize(self.xwrq, self.ywrq)
         
     def OnPaint(self, event):
-        print 'Zoom.OnPaint'
+        #print 'Zoom.OnPaint'
         dc = wx.PaintDC(self)
-        state = self.GetParent().sim.state
         try:
+            self.dist = 1e7
+            state = self.GetParent().sim.state
             dc.SetPen(wx.RED_PEN)
             dc.SetBrush(wx.RED_BRUSH)
             for sat in state.satellites:
@@ -390,6 +390,7 @@ class ZoomWindow(wx.Frame):
                 v = math.sqrt(sat.vx ** 2 + sat.vy ** 2)
                 dc.DrawCircle(x, y, 3)
                 dc.DrawLine(x, y, x + 20 * sat.vx / v, y + 20 * sat.vy / v)
+                self.dist = min(self.dist, math.sqrt((sat.sx - state.sx) ** 2 + (sat.sy - state.sy) ** 2))
             dc.SetPen(wx.BLACK_PEN)
             dc.SetBrush(wx.BLACK_BRUSH)
             x = self.xp / 2
@@ -399,8 +400,14 @@ class ZoomWindow(wx.Frame):
             dc.DrawLine(x, y, x + 20 * state.vx / v, y + 20 * state.vy / v)
         except TypeError:
             pass
+        except AttributeError:
+            pass
+        self.UpdateStatusBar()
         
     def SetWorldSize(self, xw, yw):
+        size = self.GetClientSize()
+        self.xp = size.x
+        self.yp = size.y
         self.xwrq = xw
         self.ywrq = yw
         self.UpdateWorldSize()
@@ -421,7 +428,8 @@ class ZoomWindow(wx.Frame):
     def UpdateStatusBar(self):
         bar = self.GetStatusBar()
         bar.SetStatusText('wx: %dm' % self.xw, 0)
-        bar.SetStatusText('wy: %dm' % self.yw, 1)
+        d = ('d: %.0fm' % self.dist) if self.dist < 1e7 else 'd: -'
+        bar.SetStatusText(d, 1)
 
 if __name__ == '__main__':
     controller = ''
