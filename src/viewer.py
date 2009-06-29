@@ -364,7 +364,7 @@ class Canvas(wx.Panel):
                     dc.SetPen(wx.BLACK_PEN)
                     dc.SetBrush(wx.BLACK_BRUSH)
                     v = abs(sat.v)
-                    dc.DrawLine(x, y, x + 20 * sat.vx / v, y + 20 * sat.vy / v)
+                    dc.DrawLine(x, y, x + 20 * sat.vx / v, y - 20 * sat.vy / v)
         dc.SetPen(wx.BLACK_PEN)
         dc.SetBrush(wx.BLACK_BRUSH)
         if showHistory:
@@ -375,12 +375,12 @@ class Canvas(wx.Panel):
                 points = state.orbit.points()
                 dc.DrawPolygon([wx.Point(*self.PosP(*p)) for p in points])
             x, y = self.PosP(state.sx, state.sy)
+            dc.SetPen(wx.BLACK_PEN)
+            dc.SetBrush(wx.BLACK_BRUSH)
             dc.DrawCircle(x, y, 3)
             if state.v:
-                dc.SetPen(wx.BLACK_PEN)
-                dc.SetBrush(wx.BLACK_BRUSH)
                 v = abs(state.v)
-                dc.DrawLine(x, y, x + 20 * state.vx / v, y + 20 * state.vy / v)
+                dc.DrawLine(x, y, x + 20 * state.vx / v, y - 20 * state.vy / v)
         
     # Draw circle in world coordinates.
     def CircleW(self, dc, xw, yw, rw):
@@ -396,7 +396,7 @@ class Canvas(wx.Panel):
     # Convert position in world coordinates to pixels.
     def PosP(self, xw, yw):
         x = xw / self.scale + self.xp / 2
-        y = yw / self.scale + self.yp / 2
+        y = -yw / self.scale + self.yp / 2
         return (x, y)
         
     # Convert distance in world coordinates to pixels.
@@ -442,7 +442,7 @@ class ZoomWindow(wx.Frame):
                 y = self.yp / 2 + dy
                 v = math.sqrt(sat.vx ** 2 + sat.vy ** 2)
                 dc.DrawCircle(x, y, 3)
-                dc.DrawLine(x, y, x + 20 * sat.vx / v, y + 20 * sat.vy / v)
+                dc.DrawLine(x, y, x + 20 * sat.vx / v, y - 20 * sat.vy / v)
                 self.dist = min(self.dist, math.sqrt((sat.sx - state.sx) ** 2 + (sat.sy - state.sy) ** 2))
             dc.SetPen(wx.BLACK_PEN)
             dc.SetBrush(wx.BLACK_BRUSH)
@@ -450,7 +450,7 @@ class ZoomWindow(wx.Frame):
             y = self.yp / 2
             v = abs(state.v)
             dc.DrawCircle(x, y, 3)
-            dc.DrawLine(x, y, x + 20 * state.vx / v, y + 20 * state.vy / v)
+            dc.DrawLine(x, y, x + 20 * state.vx / v, y - 20 * state.vy / v)
         except TypeError:
             pass
         except AttributeError:
