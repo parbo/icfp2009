@@ -97,10 +97,6 @@ class EccentricMeetAndGreetSim(Simulation):
         self.vm.input[2], self.vm.input[3] = self.h.interceptburn(self.state.dir, self.state.s, self.state.v)            
 
         self.h = None
-        if abs(self.state.radius-self.transferradius) > 500.0:
-            # didn't hit target, do a new transfer
-            print "didn't hit target, do a new transfer"
-            return self.transfer
         return self.target
         
     def target(self):
