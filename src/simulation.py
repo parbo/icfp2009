@@ -132,6 +132,8 @@ class State(object):
                         self.orbit = None
                 except TypeError:
                     pass
+        # Fuel station
+        self.fuel_station = self.get_fuel_station(vm, previous)
         # Other satellites
         self.satellites = self.get_satellites(vm, previous)
                     
@@ -170,6 +172,9 @@ class State(object):
             s.append(Satellite(self, xport, yport, prevsat))
         return s
         
+    def get_fuel_station(self, vm, previous):
+        return None
+        
 class HohmannState(State):
     def __init__(self, time=0, vm=None, previous=None):
         State.__init__(self, time, vm, previous)
@@ -193,6 +198,13 @@ class OpClearSkiesState(State):
         
     def satellite_ports(self, satellite_ix):
         return (3 * satellite_ix + 7, 3 * satellite_ix + 8)
+        
+    def get_fuel_station(self, vm, previous):
+        try:
+            prevsat = previous.fuel_station
+        except AttributeError:
+            prevsat = None
+        return FuelStation(self, 4, 5, prevsat)
         
 class Satellite(object):
     def __init__(self, ref_sat, xport, yport, previous):
@@ -233,6 +245,15 @@ class Satellite(object):
             if self.sx and self.sy:
                 self._radius = math.sqrt(self.sx ** 2 + self.sy ** 2)
         return self._radius
+        
+class FuelStation(Satellite):
+    def __init__(self, ref_sat, xport, yport, previous):
+        Satellite.__init__(self, ref_sat, xport, yport, previous)
+        if (ref_sat.time > 0) and (ref_sat.vm is not None):
+            self.fuel = ref_sat.vm.output[6]
+            
+    def __str__(self):
+        return 'FuelStation(%f, %f, %f)' % (self.sx, self.sy, self.fuel)
         
 def Create(problem, conf):
     return Simulation(problem, conf)
