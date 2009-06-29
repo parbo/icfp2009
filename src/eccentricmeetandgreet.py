@@ -21,6 +21,7 @@ class EccentricMeetAndGreetSim(Simulation):
         self.transferradius = 0.0
         self.current_sat = 0
         self.skipnext = False
+        self.adjust_ready_time = 0
 
     def get_target_orbit(self):
         return self.transferradius
@@ -101,9 +102,23 @@ class EccentricMeetAndGreetSim(Simulation):
         pass
 
     def adjust(self):
-        # add adjuster
-        return self.rendez_vous
-        pass
+        if self.time > self.adjust_ready_time:
+            dt = 1200
+            # Make thrust
+            sr = self.state.s
+            sv = self.state.v
+            tr = self.state.satellites[0].s
+            tv = self.state.satellites[0].v
+            d = abs(sr - tr)
+            if d < 500.0:
+                return self.idle
+            dv = tv - sv + (1.0 / dt) * (tr -sr)
+            self.adjust_ready_time = self.time + 1000
+            print 'Gravity free navigation'
+            print 'Distance: %.0f' % abs(sr - tr)
+            print 'Thrust (t=%d): %s' % (self.time, dv)
+            self.vm.input[2] = -dv.x
+            self.vm.input[3] = -dv.y
 
     def rendez_vous(self):
         sat = self.state.satellites[self.current_sat]
@@ -131,6 +146,9 @@ class EccentricMeetAndGreetSim(Simulation):
             self.vm.input[2], self.vm.input[3] = -vb.x, -vb.y
             self.burntime = self.state.time
             return self.wait
+            
+    def idle(self):
+        pass
                 
 
 def Create(problem, conf):
