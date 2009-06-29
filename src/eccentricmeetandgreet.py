@@ -33,6 +33,8 @@ class EccentricMeetAndGreetSim(Simulation):
         self.skipnext = False
         self.adjust_ready_time = 0
         self.hack = False
+        self.sat = None
+        self.refuelling = False
 
     def get_target_orbit(self):
         return self.transferradius
@@ -40,14 +42,20 @@ class EccentricMeetAndGreetSim(Simulation):
     def input(self):
         self.vm.input[2] = 0.0
         self.vm.input[3] = 0.0
-        if self.state.satellites[self.current_sat].v:
-            self.state.satellites[self.current_sat].create_orbit()
+
+        if self.refuelling:
+            self.sat = self.state.fuel_station
+        else:
+            self.sat = self.state.satellites[self.current_sat]
+        
+        if self.sat.v:
+            self.sat.create_orbit()
         if self.skipnext:
             self.skipnext = False
             return
         newphase = self.phase()
         # try:
-        #     sat = self.state.satellites[self.current_sat]
+        #     sat = self.sat
         #     print_time_to_perigee(sat)
         #     if same_angle(math.pi + sat.angle, sat.orbit.angle):
         #         print "ORBIT", self.state.time
@@ -60,13 +68,13 @@ class EccentricMeetAndGreetSim(Simulation):
 
     def init(self):
         self.h = None
-        sat = self.state.satellites[self.current_sat]
+        sat = self.sat
         if sat.orbit:
             self.transferradius = (1.0-sat.orbit.e) * sat.orbit.a
             return self.transfer
 
     def catch_up(self):
-        sat = self.state.satellites[self.current_sat]
+        sat = self.sat
         phi = sat.s.angle_signed(self.state.s)
         if abs(self.dphi-phi) < 0.5 * abs(self.state.v)/self.state.radius:
             self.transferradius = sat.radius
@@ -94,7 +102,7 @@ class EccentricMeetAndGreetSim(Simulation):
             return self.intercept
 
     def intercept(self):
-        sat = self.state.satellites[self.current_sat]
+        sat = self.sat
         print "Intercept burn"
         print self.conf
         if self.conf == 4004:
@@ -108,7 +116,7 @@ class EccentricMeetAndGreetSim(Simulation):
         return self.target
         
     def target(self):
-        sat = self.state.satellites[self.current_sat]
+        sat = self.sat
         if same_angle(math.pi + self.state.angle, sat.orbit.angle):
             self.h = Hohmann(self.state.radius, 2.0 * sat.orbit.a - self.state.radius)
             print self.h
@@ -118,7 +126,7 @@ class EccentricMeetAndGreetSim(Simulation):
             return self.rendez_vous
 
     def wait(self):
-        sat = self.state.satellites[self.current_sat]
+        sat = self.sat
         sr = self.state.s
         tr = sat.s
         d = abs(sr - tr)
@@ -134,7 +142,7 @@ class EccentricMeetAndGreetSim(Simulation):
         return False
 
         sr = self.state.s
-        o = self.state.satellites[self.current_sat].orbit
+        o = self.sat.orbit
         tr = self.state.s.normalize() * (o.a-o.c)
         d = abs(sr - tr)
         ret = (d > 10e4)        
@@ -153,8 +161,8 @@ class EccentricMeetAndGreetSim(Simulation):
             # Make thrust
             sr = self.state.s
             sv = self.state.v
-            tr = self.state.satellites[self.current_sat].s
-            tv = self.state.satellites[self.current_sat].v
+            tr = self.sat.s
+            tv = self.sat.v
             d = abs(sr - tr)
             if d < 500.0:
                 return self.idle
@@ -172,7 +180,7 @@ class EccentricMeetAndGreetSim(Simulation):
             # Make thrust
             sr = self.state.s
             sv = self.state.v
-            o = self.state.satellites[self.current_sat].orbit
+            o = self.sat.orbit
             tr = self.state.s.normalize() * (o.a-o.c)
             tv = self.state.v.normalize() * ((o.a-o.c) / abs(sv))
             d = abs(sr - tr)
@@ -187,12 +195,12 @@ class EccentricMeetAndGreetSim(Simulation):
             self.vm.input[3] = -dv.y
 
     def rendez_vous(self):
-        sat = self.state.satellites[self.current_sat]
+        sat = self.sat
         if same_angle(math.pi + self.state.angle, sat.orbit.angle):
             a = 0.0
             self.perigee_passes = 0
             e = None
-            while e == None or abs((e.a-e.c) - Rj) < 1000.0:
+            while e == None or abs((e.a-e.c) - Rj) < 20000.0:
                 t2p = sat.orbit.time_to_perigee(sat.s)
                 op = sat.orbit.orbit_period
                 if t2p > (op / 2.0):
@@ -226,6 +234,10 @@ class EccentricMeetAndGreetSim(Simulation):
         print "Switching to satellite", self.current_sat
         if self.current_sat < len(self.state.satellites):
             print "Going back to init"
+            if self.refuelling:
+                self.refuelling = False
+            else:
+                self.refuelling = True
             return self.init
                 
 
