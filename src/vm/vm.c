@@ -62,16 +62,17 @@ typedef enum _CMPZ_opcodes
 #define ADDRSPACESZ 16384
 
 #define TRACE(LVL, x) if (LVL <= g_dbglvl) printf x
+//#define TRACE(LVL, x)
 #define TRACE0(x) TRACE(0, x)
 #define TRACE1(x) TRACE(1, x)
 #define TRACE2(x) TRACE(2, x)
 #define TRACE3(x) TRACE(3, x)
 
-volatile uint32_t g_status = 0;
-volatile double g_data[ADDRSPACESZ];
-volatile uint32_t g_instructions[ADDRSPACESZ];
-volatile double g_input[ADDRSPACESZ];
-volatile double g_output[ADDRSPACESZ];
+uint32_t g_status = 0;
+double g_data[ADDRSPACESZ];
+uint32_t g_instructions[ADDRSPACESZ];
+double g_input[ADDRSPACESZ];
+double g_output[ADDRSPACESZ];
 
 int g_dbglvl = 0;
 
@@ -186,9 +187,6 @@ double readoutput(uint32_t port)
 void timestep()
 {
     uint32_t pc = 0;
-    volatile double tmp;
-    volatile double d1;
-    volatile double d2;
     for (pc = 0; pc < ADDRSPACESZ; ++pc)
     {
         uint32_t ins = g_instructions[pc];
@@ -201,24 +199,15 @@ void timestep()
             switch (op)
             {
                 case D_OP_ADD:
-                    d1 = g_data[r1];
-                    d2 = g_data[r2];
-                    tmp = d1 + d2;
-                    g_data[pc] = tmp;
+                    g_data[pc] = g_data[r1] + g_data[r2];
                     TRACE3(("%d D: ADD, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
                     break;
                 case D_OP_SUB:
-                    d1 = g_data[r1];
-                    d2 = g_data[r2];
-                    tmp = d1-d2;
-                    g_data[pc] = tmp;
+                    g_data[pc] = g_data[r1] - g_data[r2];
                     TRACE3(("%d D: SUB, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
                     break;
                 case D_OP_MULT:
-                    d1 = g_data[r1];
-                    d2 = g_data[r2];
-                    tmp = d1*d2;
-                    g_data[pc] = tmp;
+                    g_data[pc] = g_data[r1] * g_data[r2];
                     TRACE3(("%d D: MULT, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
                     break;
                 case D_OP_DIV:
@@ -228,10 +217,7 @@ void timestep()
                     }
                     else
                     {
-                        d1 = g_data[r1];
-                        d2 = g_data[r2];
-                        tmp = d1 / d2;
-                        g_data[pc] = tmp;
+                        g_data[pc] = g_data[r1] / g_data[r2];
                     }
                     TRACE3(("%d D: DIV, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
                     break;
@@ -331,10 +317,7 @@ void timestep()
                     break;
                 case S_OP_SQRT:
                     {
-                        volatile double d = g_data[r1];
-                        volatile double s = sqrt(d);
-//                        volatile double a = abs(s);
-                        g_data[pc] = s;
+                        g_data[pc] = sqrt(g_data[r1]);
                     }
                     TRACE3(("%d S: SQRT, %d, %d, %f, %f\n", pc, imm, r1, g_data[r1], g_data[pc]));
                     break;

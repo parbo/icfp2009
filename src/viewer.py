@@ -483,6 +483,11 @@ class ZoomWindow(wx.Frame):
         bar.SetStatusText(d, 1)
 
 if __name__ == '__main__':
+    # try:
+    #     import psyco 
+    #     psyco.full()
+    # except:
+    #     pass
     controller = ''
     problem = ''
     conf = 1001

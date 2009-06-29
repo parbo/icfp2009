@@ -93,10 +93,13 @@ class EccentricMeetAndGreetSim(Simulation):
             return self.intercept
 
     def intercept(self):
+        sat = self.state.satellites[self.current_sat]
         print "Intercept burn"
         self.vm.input[2], self.vm.input[3] = self.h.interceptburn(self.state.dir, self.state.s, self.state.v)            
-
+        
         self.h = None
+        if self.adjust_orbit_needed(sat):
+            return self.adjust_orbit
         return self.target
         
     def target(self):
@@ -117,13 +120,27 @@ class EccentricMeetAndGreetSim(Simulation):
         if self.adjust_allowed(sat):
             print 'Enter adjust state at distance d = %.4e' % d
             return self.adjust
+        if self.adjust_orbit_needed(sat):
+            return self.adjust_orbit
         pass
         
+    def adjust_orbit_needed(self, sat):
+        # doesn't work
+        return False
+
+        sr = self.state.s
+        o = self.state.satellites[self.current_sat].orbit
+        tr = self.state.s.normalize() * (o.a-o.c)
+        d = abs(sr - tr)
+        ret = (d > 10e4)        
+        print "ADJUST ORBIT NEEDED: ", ret
+        return ret
+
     def adjust_allowed(self, sat):
         sr = self.state.s
         tr = sat.s
         d = abs(sr - tr)
-        return (d < 10e4) or (d / (abs(sr) / EARTH_RADIUS) < 2e4)
+        return (d < 100e4)
 
     def adjust(self):
         if self.time > self.adjust_ready_time:
@@ -137,6 +154,26 @@ class EccentricMeetAndGreetSim(Simulation):
             if d < 500.0:
                 return self.idle
             dv = tv - sv + (1.0 / dt) * (tr -sr)
+            self.adjust_ready_time = self.time + 1000
+            print 'Gravity free navigation'
+            print 'Distance: %.0f' % abs(sr - tr)
+            print 'Thrust (t=%d): %s' % (self.time, dv)
+            self.vm.input[2] = -dv.x
+            self.vm.input[3] = -dv.y
+
+    def adjust_orbit(self):
+        if self.time > self.adjust_ready_time:
+            dt = 1200
+            # Make thrust
+            sr = self.state.s
+            sv = self.state.v
+            o = self.state.satellites[self.current_sat].orbit
+            tr = self.state.s.normalize() * (o.a-o.c)
+            tv = self.state.v.normalize() * ((o.a-o.c) / abs(sv))
+            d = abs(sr - tr)
+            if d < 500.0:
+                return self.target
+            dv = 0.1 * tv - sv + (1.0 / dt) * (tr -sr)
             self.adjust_ready_time = self.time + 1000
             print 'Gravity free navigation'
             print 'Distance: %.0f' % abs(sr - tr)
