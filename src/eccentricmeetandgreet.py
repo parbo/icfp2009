@@ -1,8 +1,9 @@
-from simulation import Simulation, EARTH_RADIUS
+from simulation import Simulation, angle_from_x
 from mathutils import Hohmann
-from mathutils import score, major_axis_from_orbit_period, v_in_perigee
+from mathutils import score, major_axis_from_orbit_period, v_in_perigee, Rj
 import math
 from vector import Vector
+import ellipse
 
 def calc_phi(r, atx, m):
     return math.pi * (1.0 - (2.0 * m - 1.0) * ((atx / r ) ** (3.0/2.0)))
@@ -10,6 +11,12 @@ def calc_phi(r, atx, m):
 def calc_a(r, dphi, n):
     return r * ((1.0 - dphi / (2.0 * math.pi * n)) ** (2.0/3.0))
 
+def same_angle(a1, a2):
+    diff = abs(a1-a2)
+    while diff > 2.0 * math.pi:
+        diff -= 2.0 * math.pi
+    return diff < 0.005
+        
 class EccentricMeetAndGreetSim(Simulation):
     def __init__(self, problem=None, conf=None):
         Simulation.__init__(self, problem, conf, 'Hohmann transfer simulation')        
@@ -85,7 +92,7 @@ class EccentricMeetAndGreetSim(Simulation):
         
     def target(self):
         sat = self.state.satellites[self.current_sat]
-        if abs(Vector(1.0, 0.0).angle_signed(self.state.s) - sat.orbit.angle) < 0.005:
+        if same_angle(self.state.angle, sat.orbit.angle):
             self.h = Hohmann(self.state.radius, 2.0 * sat.orbit.a - self.state.radius)
             print self.h
             self.burntime = self.state.time
@@ -101,10 +108,6 @@ class EccentricMeetAndGreetSim(Simulation):
         if self.adjust_allowed(sat):
             print 'Enter adjust state at distance d = %.4e' % d
             return self.adjust
-        if abs(-Vector(1.0, 0.0).angle_signed(self.state.s) - sat.orbit.angle) < 0.005:
-            self.perigee_passes -= 1
-            if (self.perigee_passes == 0) and self.adjust_allowed(sat):
-                return self.adjust
         pass
         
     def adjust_allowed(self, sat):
@@ -134,27 +137,36 @@ class EccentricMeetAndGreetSim(Simulation):
 
     def rendez_vous(self):
         sat = self.state.satellites[self.current_sat]
-        if abs(Vector(1.0, 0.0).angle_signed(self.state.s) - sat.orbit.angle) < 0.005:
+        if same_angle(self.state.angle, sat.orbit.angle):
             print "sat time to perigee", sat.orbit.time_to_perigee(sat.s)
             a = 0.0
-            self.perigee_passes = 1
-            t2p = sat.orbit.time_to_perigee(sat.s)
-            op = sat.orbit.orbit_period
-            if t2p > (op / 2.0):
-                print "Sat is AHEAD"
-                new_orbit_period = t2p
-            else:
-                print "Sat is BEHIND"
-                new_orbit_period = op + t2p
-            
-            print "Orbit periods", op, t2p, new_orbit_period
+            self.perigee_passes = 0
+            e = None
+            while e == None or abs((e.a-e.c) - Rj) < 1000.0:
+                t2p = sat.orbit.time_to_perigee(sat.s)
+                op = sat.orbit.orbit_period
+                if t2p > (op / 2.0):
+                    print "Sat is AHEAD"
+                    new_orbit_period = t2p
+                else:
+                    print "Sat is BEHIND"
+                    new_orbit_period = op + t2p
+                    
+                print "Orbit periods", op, t2p, new_orbit_period
 
-            a = major_axis_from_orbit_period((self.perigee_passes) * new_orbit_period)
-            print "Major axis", a
-            print "Radius", abs(self.state.s)
-            newv = v_in_perigee(abs(self.state.s), a)
-            v = self.state.v
-            vb = newv * v.normalize() - v
+                a = major_axis_from_orbit_period((1+self.perigee_passes) * new_orbit_period)
+                print "Major axis", a
+                print "Radius", abs(self.state.s)
+
+                newv = v_in_perigee(abs(self.state.s), a)
+                v = self.state.v
+                vb = newv * v.normalize() - v
+                e = ellipse.create(self.state.s, vb)                
+
+                print "Earth check", abs((e.a-e.c) - Rj)
+
+                self.perigee_passes += 1
+
             self.vm.input[2], self.vm.input[3] = -vb.x, -vb.y
             self.burntime = self.state.time
             return self.wait
