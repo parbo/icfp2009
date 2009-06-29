@@ -43,6 +43,9 @@ class EccentricMeetAndGreetSim(Simulation):
         self.vm.input[2] = 0.0
         self.vm.input[3] = 0.0
 
+        if self.current_sat >= len(self.state.satellites):
+            return
+
         if self.refuelling:
             self.sat = self.state.fuel_station
         else:
@@ -153,6 +156,8 @@ class EccentricMeetAndGreetSim(Simulation):
         sr = self.state.s
         tr = sat.s
         d = abs(sr - tr)
+        if self.refuelling:
+            return (d < 200e4)
         return (d < 100e4)
 
     def adjust(self):
