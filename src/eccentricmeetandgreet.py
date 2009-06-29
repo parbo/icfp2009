@@ -39,6 +39,8 @@ class EccentricMeetAndGreetSim(Simulation):
     def input(self):
         self.vm.input[2] = 0.0
         self.vm.input[3] = 0.0
+        if self.state.satellites[self.current_sat].v:
+            self.state.satellites[self.current_sat].create_orbit()
         if self.skipnext:
             self.skipnext = False
             return
@@ -132,8 +134,8 @@ class EccentricMeetAndGreetSim(Simulation):
             # Make thrust
             sr = self.state.s
             sv = self.state.v
-            tr = self.state.satellites[0].s
-            tv = self.state.satellites[0].v
+            tr = self.state.satellites[self.current_sat].s
+            tv = self.state.satellites[self.current_sat].v
             d = abs(sr - tr)
             if d < 500.0:
                 return self.idle
@@ -181,7 +183,11 @@ class EccentricMeetAndGreetSim(Simulation):
             return self.wait
             
     def idle(self):
-        pass
+        self.current_sat += 1
+        print "Switching to satellite", self.current_sat
+        if self.current_sat < len(self.state.satellites):
+            print "Going back to init"
+            return self.init
                 
 
 def Create(problem, conf):

@@ -50,7 +50,6 @@ class Viewer(wx.Frame):
         self.outfileSelectBtn = wx.Button(self, ID_OUTFILE_SELECT_BTN, 'Select')
         self.configInput = wx.SpinCtrl(self, -1, str(conf), min=1000, max=9999, initial=conf)
         self.writeBtn = wx.Button(self, ID_WRITE_BTN, 'Write Result')
-        self.writeBtn.Disable()
         self.loadBtn = wx.Button(self, ID_LOAD_BTN, 'Load')
         self.stepBtn = wx.Button(self, ID_STEP_BTN, 'Step')
         self.stepInput = wx.SpinCtrl(self, -1, '100', min=1, max=3000000, initial=100)
@@ -155,7 +154,6 @@ class Viewer(wx.Frame):
         
     def OnLoadBtn(self, event):
         #print 'OnLoadBtn'
-        self.writeBtn.Disable()
         controller_path = self.controlInput.GetValue()
         problem = self.problemInput.GetValue()
         ctrldirpath = os.path.dirname(controller_path)

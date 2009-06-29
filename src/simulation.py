@@ -98,6 +98,7 @@ class Simulation(object):
         
 class State(object):
     def __init__(self, time=0, vm=None, previous=None):
+        self.current_sat = 0
         self.time = time
         self.score = 0.0
         # Satellite position
@@ -111,13 +112,13 @@ class State(object):
         # Fuel
         self.current_fuel = None
         self.vm = vm
+        self._radius = None
         if (time > 0) and (vm is not None):
             self.score = vm.output[0]
             self.current_fuel = vm.output[1]
             self.sx = vm.output[2]
             self.sy = vm.output[3]
             self.s = Vector(self.sx, self.sy)
-            self.radius = math.sqrt(self.sx ** 2 + self.sy ** 2)
             if previous is not None:
                 try:
                     self.vx = self.sx - previous.sx
@@ -134,6 +135,13 @@ class State(object):
         # Other satellites
         self.satellites = self.get_satellites(vm, previous)
                     
+    @property
+    def radius(self):
+        if self._radius == None:
+            if self.sx and self.sy:
+                self._radius = math.sqrt(self.sx ** 2 + self.sy ** 2)
+        return self._radius
+
     def __str__(self):
         s = []
         s.append('time:  ' + str(self.time))
@@ -193,30 +201,38 @@ class Satellite(object):
         self.sx = None
         self.sy = None
         self.s = None
-        self.radius = None
         self.vx = None
         self.vy = None
         self.v = None
         self.orbit = None
+        self._radius = None
         if (ref_sat.time > 0) and (ref_sat.vm is not None):
             self.rx = ref_sat.vm.output[xport]
             self.ry = ref_sat.vm.output[yport]
             self.sx = ref_sat.sx - self.rx
             self.sy = ref_sat.sy - self.ry
             self.s = Vector(self.sx, self.sy)
-            self.radius = math.sqrt(self.sx ** 2 + self.sy ** 2)
             try:
                 self.vx = self.sx - previous.sx
                 self.vy = self.sy - previous.sy
                 self.v = Vector(self.vx, self.vy)
                 self.dir = self.s.cross(self.v)
                 self.angle = self.s.direction()
-                try:
-                    self.orbit = ellipse.create(self.s, self.v)
-                except ValueError:
-                    self.orbit = None
             except TypeError:
                 pass
+
+    def create_orbit(self):
+        try:
+            self.orbit = ellipse.create(self.s, self.v)
+        except ValueError:
+            self.orbit = None
+
+    @property
+    def radius(self):
+        if self._radius == None:
+            if self.sx and self.sy:
+                self._radius = math.sqrt(self.sx ** 2 + self.sy ** 2)
+        return self._radius
         
 def Create(problem, conf):
     return Simulation(problem, conf)
