@@ -68,7 +68,7 @@ class Hohmann(OrbitTransfer):
         dvay = -dva.y
         return dvax, dvay            
 
-    def interceptburn(self, d, s, v, wrongway=False):
+    def interceptburn_foo(self, d, s, v, wrongway=False):
         d = v.normalize()
         dvb = (d * self.dvb) 
         if wrongway:
