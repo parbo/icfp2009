@@ -193,6 +193,8 @@ class Viewer(wx.Frame):
         
     def OnInfoBtn(self, event):
         #print 'OnInfoBtn'
+        print 'Scale = %.3e m/pxl' % self.scale
+        print
         for ix, sat in enumerate(self.sim.state.satellites):
             print 'Satellite %d orbit' % (ix + 1)
             print 'x:          %.5e' % sat.orbit.x
@@ -202,6 +204,7 @@ class Viewer(wx.Frame):
             print 'Angle:      %.5f' % sat.orbit.angle
             print 'c:          %.5e' % sat.orbit.c
             print 'e:          %.5f' % sat.orbit.e
+            print
         
     def OnShowHistoryBox(self, event):
         #print 'OnShowHistoryBox'
@@ -340,7 +343,7 @@ class Canvas(wx.Panel):
         self.yw = scale * self.yp
         self.scale = scale
         self.Refresh()
-        print 'Set world size:', self.xw / EARTH_RADIUS, self.yw / EARTH_RADIUS, 'Scale = %.3e m/pxl' % scale
+        #print 'Set world size:', self.xw / EARTH_RADIUS, self.yw / EARTH_RADIUS, 'Scale = %.3e m/pxl' % scale
         
     def DrawState(self, dc, parent, state):
         showHistory = parent.showHistoryBox.GetValue()
