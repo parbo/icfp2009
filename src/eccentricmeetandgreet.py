@@ -1,4 +1,4 @@
-from simulation import Simulation
+from simulation import Simulation, EARTH_RADIUS
 from mathutils import Hohmann
 from mathutils import score, major_axis_from_orbit_period, v_in_perigee
 import math
@@ -95,6 +95,12 @@ class EccentricMeetAndGreetSim(Simulation):
 
     def wait(self):
         sat = self.state.satellites[self.current_sat]
+        sr = self.state.s
+        tr = sat.s
+        d = abs(sr - tr)
+        if d / (abs(sr) / EARTH_RADIUS) < 2e4:
+            print 'Enter adjust state at distance d = %.4e' % d
+            return self.adjust
         if abs(-Vector(1.0, 0.0).angle_signed(self.state.s) - sat.orbit.angle) < 0.005:
             self.perigee_passes -= 1
             if self.perigee_passes == 0:
