@@ -14,6 +14,12 @@ def score(frem, fstart, t):
 def hohmann_score(frem, fstart, t):
     return 25.0 + 45.0 * ((fstart-frem)/fstart) + (30.0 - math.log(t/1000.0, 2.0))
 
+def major_axis_from_orbit_period(orbit_period):
+    return (G*Me * (orbit_period / (2.0 * math.pi)) ** 2.0) ** (1.0/3.0)
+
+def v_in_perigee(r, a):
+    return math.sqrt(G*Me*(2.0/r - 1.0/a))
+
 class OrbitTransfer(object):
     def __init__(self, ra, rb, atx):
         self.ra = ra

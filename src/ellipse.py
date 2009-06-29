@@ -58,6 +58,14 @@ class Ellipse(object):
     @property
     def orbit_period(self):
         return 2 * math.pi * math.sqrt(self.a ** 3 / GMe)
+
+    def time_to_perigee(self, pos):
+        d = Vector(math.cos(self.angle), math.sin(self.angle))
+        angle = pos.angle_signed(d)
+        t = abs(self.time(angle, 0.0))
+        if angle > 0.0:
+            t = self.orbit_period - t
+        return t
         
     def time(self, start, end):
         ''' Calculate time to travel from angle start to angle end. '''
