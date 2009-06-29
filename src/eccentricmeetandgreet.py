@@ -1,6 +1,6 @@
 from simulation import Simulation
 from mathutils import Hohmann
-from mathutils import score
+from mathutils import score, major_axis_from_orbit_period, v_in_perigee
 import math
 from vector import Vector
 
@@ -11,20 +11,16 @@ def calc_a(r, dphi, n):
     return r * ((1.0 - dphi / (2.0 * math.pi * n)) ** (2.0/3.0))
 
 class EccentricMeetAndGreetSim(Simulation):
-    INIT = 0
-    CATCH_UP = 1
-    TRANSFER = 2
-    INTERCEPT = 3
-    TARGET = 4
-    RENDEZ_VOUS = 5
     def __init__(self, problem=None, conf=None):
         Simulation.__init__(self, problem, conf, 'Hohmann transfer simulation')        
         self.h = None
         self.tb = None
-        self.phase = EccentricMeetAndGreetSim.INIT
+        self.phase = self.init
         self.burntime = 0
         self.dphi = None
         self.transferradius = 0.0
+        self.current_sat = 0
+        self.skipnext = False
 
     def get_target_orbit(self):
         return self.transferradius
@@ -32,34 +28,27 @@ class EccentricMeetAndGreetSim(Simulation):
     def input(self):
         self.vm.input[2] = 0.0
         self.vm.input[3] = 0.0
-        if self.phase == EccentricMeetAndGreetSim.INIT:
-            newphase = self.init()
-        elif self.phase == EccentricMeetAndGreetSim.CATCH_UP:
-            newphase = self.catch_up()
-        elif self.phase == EccentricMeetAndGreetSim.TRANSFER:
-            newphase = self.transfer()
-        elif self.phase == EccentricMeetAndGreetSim.INTERCEPT:
-            newphase = self.intercept()
-        elif self.phase == EccentricMeetAndGreetSim.TARGET:
-            newphase = self.target()
-        elif self.phase == EccentricMeetAndGreetSim.RENDEZ_VOUS:
-            newphase = self.rendez_vous()
+        if self.skipnext:
+            self.skipnext = False
+            return
+        newphase = self.phase()
         if newphase and newphase != self.phase:
+            print "******************************************"
             self.phase = newphase
-            print "New phase:", self.phase
+            self.skipnext = True
 
     def init(self):
-        sat = self.state.satellites[0]
+        sat = self.state.satellites[self.current_sat]
         if sat.orbit:
             self.transferradius = (1.0-sat.orbit.e) * sat.orbit.a
-            return EccentricMeetAndGreetSim.TRANSFER
+            return self.transfer
 
     def catch_up(self):
-        sat = self.state.satellites[0]
+        sat = self.state.satellites[self.current_sat]
         phi = sat.s.angle_signed(self.state.s)
         if abs(self.dphi-phi) < 0.5 * abs(self.state.v)/self.state.radius:
             self.transferradius = sat.radius
-            return EccentricMeetAndGreetSim.TRANSFER
+            return self.transfer
         
     def transfer(self):
         if not self.h:
@@ -80,7 +69,7 @@ class EccentricMeetAndGreetSim(Simulation):
                 raise Exception
 
         if abs(self.state.time-(self.burntime+self.h.TOF)) < 1:            
-            return EccentricMeetAndGreetSim.INTERCEPT
+            return self.intercept
 
     def intercept(self):
         print "Intercept burn"
@@ -90,22 +79,59 @@ class EccentricMeetAndGreetSim(Simulation):
         if abs(self.state.radius-self.transferradius) > 500.0:
             # didn't hit target, do a new transfer
             print "didn't hit target, do a new transfer"
-            return EccentricMeetAndGreetSim.TRANSFER
-        return EccentricMeetAndGreetSim.TARGET
+            return self.transfer
+        return self.target
         
     def target(self):
-        sat = self.state.satellites[0]
-        #print "Orbit periods:", self.state.orbit.orbit_period, sat.orbit.orbit_period
+        sat = self.state.satellites[self.current_sat]
         if abs(Vector(1.0, 0.0).angle_signed(self.state.s) - sat.orbit.angle) < 0.005:
             self.h = Hohmann(self.state.radius, 2.0 * sat.orbit.a - self.state.radius)
             print self.h
             self.burntime = self.state.time
             dvx, dvy = self.h.burn(self.state.dir, self.state.s, self.state.v)
             self.vm.input[2], self.vm.input[3] = dvx, dvy
-            return EccentricMeetAndGreetSim.RENDEZ_VOUS            
+            return self.rendez_vous
+
+    def wait(self):
+        sat = self.state.satellites[self.current_sat]
+        if abs(-Vector(1.0, 0.0).angle_signed(self.state.s) - sat.orbit.angle) < 0.005:
+            self.perigee_passes -= 1
+            if self.perigee_passes == 0:
+                return self.adjust
+        pass
+
+    def adjust(self):
+        # add adjuster
+        return self.rendez_vous
+        pass
 
     def rendez_vous(self):
-        pass
+        sat = self.state.satellites[self.current_sat]
+        if abs(Vector(1.0, 0.0).angle_signed(self.state.s) - sat.orbit.angle) < 0.005:
+            print "sat time to perigee", sat.orbit.time_to_perigee(sat.s)
+            a = 0.0
+            self.perigee_passes = 1
+            t2p = sat.orbit.time_to_perigee(sat.s)
+            op = sat.orbit.orbit_period
+            if t2p > (op / 2.0):
+                print "Sat is AHEAD"
+                new_orbit_period = t2p
+            else:
+                print "Sat is BEHIND"
+                new_orbit_period = op + t2p
+            
+            print "Orbit periods", op, t2p, new_orbit_period
+
+            a = major_axis_from_orbit_period((self.perigee_passes) * new_orbit_period)
+            print "Major axis", a
+            print "Radius", abs(self.state.s)
+            newv = v_in_perigee(abs(self.state.s), a)
+            v = self.state.v
+            vb = newv * v.normalize() - v
+            self.vm.input[2], self.vm.input[3] = -vb.x, -vb.y
+            self.burntime = self.state.time
+            return self.wait
+                
 
 def Create(problem, conf):
     return EccentricMeetAndGreetSim(problem, conf)
