@@ -191,7 +191,8 @@ class Viewer(wx.Frame):
         
     def OnInfoBtn(self, event):
         #print 'OnInfoBtn'
-        print 'Scale = %.3e m/pxl' % self.scale
+        print 'Scale = %.3e m/pxl' % self.canvas.scale
+        print self.sim.state.fuel_station
         print
         for ix, sat in enumerate(self.sim.state.satellites):
             print 'Satellite %d orbit' % (ix + 1)
@@ -363,6 +364,14 @@ class Canvas(wx.Panel):
                     dc.SetBrush(wx.BLACK_BRUSH)
                     v = abs(sat.v)
                     dc.DrawLine(x, y, x + 20 * sat.vx / v, y - 20 * sat.vy / v)
+        if state.fuel_station is not None:
+            dc.SetPen(wx.GREEN_PEN)
+            dc.SetBrush(wx.GREEN_BRUSH)
+            try:
+                x, y = self.PosP(state.fuel_station.sx, state.fuel_station.sy)
+                dc.DrawCircle(x, y, 3)
+            except AttributeError:
+                pass
         dc.SetPen(wx.BLACK_PEN)
         dc.SetBrush(wx.BLACK_BRUSH)
         if showHistory:
