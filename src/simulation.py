@@ -9,14 +9,6 @@ import ellipse
 # World constants.
 EARTH_RADIUS = 6.357e6 # [m]
 
-def angle_from_x(s, d):
-    angle = Vector(1.0, 0.0).angle_signed(s)
-    if angle < 0.0:
-        angle += 2.0 * math.pi
-        if d < 0.0:
-            angle = 2 * math.pi-angle
-    return angle
-
 class Simulation(object):
     def __init__(self, problem, conf, name=''):
         self.name = name
@@ -132,7 +124,7 @@ class State(object):
                     self.vy = self.sy - previous.sy
                     self.v = Vector(self.vx, self.vy)
                     self.dir = self.s.cross(self.v)
-                    self.angle = angle_from_x(self.s, self.dir)
+                    self.angle = self.s.direction()
                     try:
                         self.orbit = ellipse.create(self.s, self.v)
                     except ValueError:
@@ -218,7 +210,7 @@ class Satellite(object):
                 self.vy = self.sy - previous.sy
                 self.v = Vector(self.vx, self.vy)
                 self.dir = self.s.cross(self.v)
-                self.angle = angle_from_x(self.s, self.dir)
+                self.angle = self.s.direction()
                 try:
                     self.orbit = ellipse.create(self.s, self.v)
                 except ValueError:

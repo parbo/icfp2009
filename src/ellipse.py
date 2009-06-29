@@ -33,24 +33,26 @@ def create(vr, vv):
     apv = vr.angle_signed(vv)
     #apv = apv if apv < math.pi / 2 else math.pi - apv
     # Other focus point.
-    f = vr + (2 * a - r) * vr.rotate(2 * apv).normalize()
+    f = vr + (2 * a - r) * vv.rotate(apv).normalize()
     # Ellipse axis angle.
-    ea = math.pi - f.direction()
+    ea = f.direction()
     # Center
     vc = 0.5 * f
     x, y = vc.point()
-    return Ellipse(x, y, a, b, ea)
+    return Ellipse(x, y, a, b, ea, h, f)
 
 class Ellipse(object):
-    def __init__(self, x, y, major, minor, angle):
+    def __init__(self, x, y, major, minor, angle, angular_momentum, focus):
         self.x = x                  # Center point x.
         self.y = y                  # Center point y.
         self.a = major              # Length of semi-major axis.
         self.b = minor              # Length of semi-minor axis.
         self.angle = angle          # Angle between major axis and x axis.
+        self.angular_momentum = angular_momentum
         # Distance from center to foci.
         self.c = math.sqrt(self.a ** 2 - self.b ** 2)
         self.e = self.c / self.a    # Excentricity.
+        self.secondary_focus = focus
         
     def __str__(self):
         return 'Ellipse(%f, %f, %f, %f, %f)' % (self.x, self.y, self.a, self.b, self.angle)
@@ -59,12 +61,21 @@ class Ellipse(object):
     def orbit_period(self):
         return 2 * math.pi * math.sqrt(self.a ** 3 / GMe)
 
+    def angle_past_perigee(self, pos):
+            # angle past perigee
+        vperigee = -1.0 * self.secondary_focus
+        angle = vperigee.angle_signed(pos)
+        if self.angular_momentum < 0.0:
+            angle = -angle
+        return angle
+
     def time_to_perigee(self, pos):
-        d = Vector(math.cos(self.angle), math.sin(self.angle))
-        angle = pos.angle_signed(d)
-        t = abs(self.time(angle, 0.0))
-        if angle > 0.0:
-            t = self.orbit_period - t
+        angle = self.angle_past_perigee(pos)
+            
+        if angle < 0.0:
+            t = -self.time(angle, 0.0)
+        else:
+            t = self.orbit_period / 2.0 + self.time(angle, math.pi)            
         return t
         
     def time(self, start, end):

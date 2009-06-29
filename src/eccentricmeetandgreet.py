@@ -1,4 +1,4 @@
-from simulation import Simulation, angle_from_x
+from simulation import Simulation, EARTH_RADIUS
 from mathutils import Hohmann
 from mathutils import score, major_axis_from_orbit_period, v_in_perigee, Rj
 import math
@@ -16,6 +16,9 @@ def same_angle(a1, a2):
     while diff > 2.0 * math.pi:
         diff -= 2.0 * math.pi
     return diff < 0.005
+
+def print_time_to_perigee(sat):
+    print "SAT_PERIGEE", sat.orbit.angle_past_perigee(sat.s), sat.orbit.time_to_perigee(sat.s)
         
 class EccentricMeetAndGreetSim(Simulation):
     def __init__(self, problem=None, conf=None):
@@ -40,6 +43,13 @@ class EccentricMeetAndGreetSim(Simulation):
             self.skipnext = False
             return
         newphase = self.phase()
+        # try:
+        #     sat = self.state.satellites[self.current_sat]
+        #     print_time_to_perigee(sat)
+        #     if same_angle(math.pi + sat.angle, sat.orbit.angle):
+        #         print "ORBIT", self.state.time
+        # except:
+        #     pass
         if newphase and newphase != self.phase:
             print "******************************************"
             self.phase = newphase
@@ -92,7 +102,7 @@ class EccentricMeetAndGreetSim(Simulation):
         
     def target(self):
         sat = self.state.satellites[self.current_sat]
-        if same_angle(self.state.angle, sat.orbit.angle):
+        if same_angle(math.pi + self.state.angle, sat.orbit.angle):
             self.h = Hohmann(self.state.radius, 2.0 * sat.orbit.a - self.state.radius)
             print self.h
             self.burntime = self.state.time
@@ -137,8 +147,7 @@ class EccentricMeetAndGreetSim(Simulation):
 
     def rendez_vous(self):
         sat = self.state.satellites[self.current_sat]
-        if same_angle(self.state.angle, sat.orbit.angle):
-            print "sat time to perigee", sat.orbit.time_to_perigee(sat.s)
+        if same_angle(math.pi + self.state.angle, sat.orbit.angle):
             a = 0.0
             self.perigee_passes = 0
             e = None
