@@ -32,6 +32,7 @@ class EccentricMeetAndGreetSim(Simulation):
         self.current_sat = 0
         self.skipnext = False
         self.adjust_ready_time = 0
+        self.hack = False
 
     def get_target_orbit(self):
         return self.transferradius
@@ -95,7 +96,11 @@ class EccentricMeetAndGreetSim(Simulation):
     def intercept(self):
         sat = self.state.satellites[self.current_sat]
         print "Intercept burn"
-        self.vm.input[2], self.vm.input[3] = self.h.interceptburn(self.state.dir, self.state.s, self.state.v)            
+        print self.conf
+        if self.conf == 4004:
+            self.hack = True
+        dvx, dvy = self.h.interceptburn(self.state.dir, self.state.s, self.state.v, self.hack)
+        self.vm.input[2], self.vm.input[3] = dvx, dvy
         
         self.h = None
         if self.adjust_orbit_needed(sat):
