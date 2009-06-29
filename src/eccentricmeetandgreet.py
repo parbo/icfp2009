@@ -98,14 +98,20 @@ class EccentricMeetAndGreetSim(Simulation):
         sr = self.state.s
         tr = sat.s
         d = abs(sr - tr)
-        if d / (abs(sr) / EARTH_RADIUS) < 2e4:
+        if self.adjust_allowed(sat):
             print 'Enter adjust state at distance d = %.4e' % d
             return self.adjust
         if abs(-Vector(1.0, 0.0).angle_signed(self.state.s) - sat.orbit.angle) < 0.005:
             self.perigee_passes -= 1
-            if self.perigee_passes == 0:
+            if (self.perigee_passes == 0) and self.adjust_allowed(sat):
                 return self.adjust
         pass
+        
+    def adjust_allowed(self, sat):
+        sr = self.state.s
+        tr = sat.s
+        d = abs(sr - tr)
+        return (d < 10e4) or (d / (abs(sr) / EARTH_RADIUS) < 2e4)
 
     def adjust(self):
         if self.time > self.adjust_ready_time:
