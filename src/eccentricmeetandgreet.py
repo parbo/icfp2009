@@ -58,6 +58,7 @@ class EccentricMeetAndGreetSim(Simulation):
             self.skipnext = True
 
     def init(self):
+        self.h = None
         sat = self.state.satellites[self.current_sat]
         if sat.orbit:
             self.transferradius = (1.0-sat.orbit.e) * sat.orbit.a
