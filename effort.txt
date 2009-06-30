@@ -1,0 +1,33 @@
+Creating filelist for src
+Categorizing files.
+Finding a working MD5 command....
+Found a working MD5 command.
+Computing results.
+
+
+SLOC	Directory	SLOC-by-Language (Sorted)
+1913    src             python=1618,ansic=291,sh=4
+
+
+Totals grouped by language (dominant language first):
+python:        1618 (84.58%)
+ansic:          291 (15.21%)
+sh:               4 (0.21%)
+
+
+
+
+Total Physical Source Lines of Code (SLOC)                = 1,913
+Development Effort Estimate, Person-Years (Person-Months) = 0.40 (4.74)
+ (Basic COCOMO model, Person-Months = 2.4 * (KSLOC**1.05))
+Schedule Estimate, Years (Months)                         = 0.38 (4.52)
+ (Basic COCOMO model, Months = 2.5 * (person-months**0.38))
+Estimated Average Number of Developers (Effort/Schedule)  = 1.05
+Total Estimated Cost to Develop                           = $ 53,388
+ (average salary = $56,286/year, overhead = 2.40).
+SLOCCount, Copyright (C) 2001-2004 David A. Wheeler
+SLOCCount is Open Source Software/Free Software, licensed under the GNU GPL.
+SLOCCount comes with ABSOLUTELY NO WARRANTY, and you are welcome to
+redistribute it under certain conditions as specified by the GNU GPL license;
+see the documentation for details.
+Please credit this data as "generated using David A. Wheeler's 'SLOCCount'."
