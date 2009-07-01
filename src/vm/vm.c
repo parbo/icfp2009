@@ -59,6 +59,27 @@ typedef enum _CMPZ_opcodes
 	CMPZ_OP_GTZ = 0x4
 } CPMZ_opcodes;
 
+
+typedef enum _OP_opcodes
+{
+	OP_NOOP = 0x0,
+	OP_ADD = 0x1,
+	OP_SUB = 0x2,
+	OP_MULT = 0x3,
+	OP_DIV = 0x4,
+	OP_OUTPUT = 0x5,
+	OP_PHI = 0x6,
+	OP_CMPZ_LTZ = 0x7,
+	OP_CMPZ_LEZ = 0x8,
+	OP_CMPZ_EQZ = 0x9,
+	OP_CMPZ_GEZ = 0xa,
+	OP_CMPZ_GTZ = 0xb,
+	OP_SQRT = 0xc,
+	OP_COPY = 0xd,
+	OP_INPUT = 0xe
+} OP_opcodes;
+
+
 #define ADDRSPACESZ 16384
 
 #define TRACE(LVL, x) if (LVL <= g_dbglvl) printf x
@@ -68,11 +89,21 @@ typedef enum _CMPZ_opcodes
 #define TRACE2(x) TRACE(2, x)
 #define TRACE3(x) TRACE(3, x)
 
+typedef struct _frame_t
+{
+	double data;
+	OP_opcodes op;
+	uint16_t r1;
+	uint16_t r2;
+} frame_t;
+
 uint32_t g_status = 0;
-double g_data[ADDRSPACESZ];
-uint32_t g_instructions[ADDRSPACESZ];
+
+frame_t g_frames[ADDRSPACESZ];
 double g_input[ADDRSPACESZ];
 double g_output[ADDRSPACESZ];
+
+uint32_t g_lastvalid = 0;
 
 int g_dbglvl = 0;
 
@@ -87,11 +118,98 @@ void init()
     g_status = 0;
     for (i = 0; i < ADDRSPACESZ; ++i)
     {
-        g_data[i] = 0.0;
-        g_instructions[i] = 0u;
+        g_frames[i].data = 0.0;
+        g_frames[i].op = OP_NOOP;
+        g_frames[i].r1 = 0u;
+		g_frames[i].r2 = 0u;
+		
         g_input[i] = 0.0;
         g_output[i] = 0.0;
+		g_lastvalid = 0;
     }
+}
+
+frame_t getframe(double data, uint32_t ins)
+{
+	uint32_t op = ins >> 28;
+	if (op)
+	{
+		// D-type instruction
+		frame_t f;
+		f.op = OP_NOOP;
+		f.r1 = (ins >> 14) & 0x3fff;
+		f.r2 = ins & 0x3fff;            
+		f.data = data;
+		switch (op)
+		{
+		case D_OP_ADD:
+			f.op = OP_ADD;
+			break;
+		case D_OP_SUB:
+			f.op = OP_SUB;
+			break;
+		case D_OP_MULT:
+			f.op = OP_MULT;
+			break;
+		case D_OP_DIV:
+			f.op = OP_DIV;
+			break;
+		case D_OP_OUTPUT:
+			f.op = OP_OUTPUT;
+			break;
+		case D_OP_PHI:
+			f.op = OP_PHI;
+			break;
+		}
+		return f;
+	}
+	else
+	{
+		// S-type instruction
+		uint32_t imm = (ins >> 21) & 0x7;
+        frame_t f;
+		f.data = data;
+		f.op = OP_NOOP;
+		f.r1 = ins & 0x3fff;
+		f.r2 = 0;
+		op = (ins >> 24) & 0xf;
+		switch (op)
+		{
+		case S_OP_NOOP:
+			f.op = OP_NOOP;
+			break;
+		case S_OP_CMPZ:
+			switch (imm)
+			{
+			case CMPZ_OP_LTZ:
+				f.op = OP_CMPZ_LTZ;
+				break;
+			case CMPZ_OP_LEZ:
+				f.op = OP_CMPZ_LEZ;
+				break;
+			case CMPZ_OP_EQZ:
+				f.op = OP_CMPZ_EQZ;
+				break;
+			case CMPZ_OP_GEZ:
+				f.op = OP_CMPZ_GEZ;
+				break;
+			case CMPZ_OP_GTZ:
+				f.op = OP_CMPZ_GTZ;
+				break;
+			}
+			break;
+		case S_OP_SQRT:
+			f.op = OP_SQRT;
+			break;
+		case S_OP_COPY:
+			f.op = OP_COPY;
+			break;
+		case S_OP_INPUT:
+			f.op = OP_INPUT;
+			break;
+		}
+		return f;
+	}
 }
 
 int load(const char* filename)
@@ -123,8 +241,11 @@ int load(const char* filename)
                     memcpy(&ins, &frame[0], 4);
                     memcpy(&data, &frame[4], 8);
                 }
-                g_data[addr] = data;
-                g_instructions[addr] = ins;
+                g_frames[addr] = getframe(data, ins);
+				if (g_frames[addr].op != OP_NOOP || data != 0.0)
+				{
+					g_lastvalid = addr;
+				}
                 ++addr;
             }
             else
@@ -137,6 +258,7 @@ int load(const char* filename)
         TRACE1(("EOF, read %d\n", addr));
         fclose(f);
     }    
+	TRACE1(("%d valid instructions", g_lastvalid));
     return ret;
 }
 
@@ -187,151 +309,64 @@ double readoutput(uint32_t port)
 void timestep()
 {
     uint32_t pc = 0;
-    for (pc = 0; pc < ADDRSPACESZ; ++pc)
+    for (pc = 0; pc <= g_lastvalid; ++pc)
     {
-        uint32_t ins = g_instructions[pc];
-        uint32_t op = ins >> 28;
-        if (op)
-        {
-            // D-type instruction
-            uint32_t r1 = (ins >> 14) & 0x3fff;
-            uint32_t r2 = ins & 0x3fff;            
-            switch (op)
-            {
-                case D_OP_ADD:
-                    g_data[pc] = g_data[r1] + g_data[r2];
-                    TRACE3(("%d D: ADD, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
-                    break;
-                case D_OP_SUB:
-                    g_data[pc] = g_data[r1] - g_data[r2];
-                    TRACE3(("%d D: SUB, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
-                    break;
-                case D_OP_MULT:
-                    g_data[pc] = g_data[r1] * g_data[r2];
-                    TRACE3(("%d D: MULT, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
-                    break;
-                case D_OP_DIV:
-                    if (g_data[r2] == 0.0)
-                    {
-                        g_data[pc] = 0.0;
-                    }
-                    else
-                    {
-                        g_data[pc] = g_data[r1] / g_data[r2];
-                    }
-                    TRACE3(("%d D: DIV, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc]));
-                    break;
-                case D_OP_OUTPUT:
-                    g_output[r1] = g_data[r2];
-                    TRACE3(("%d D: OUTPUT, %d, %d, %f, %f, %f\n", pc, r1, r2, g_data[r1], g_data[r2], g_output[r1]));
-                    break;
-                case D_OP_PHI:
-                    if (g_status)
-                    {
-                        g_data[pc] = g_data[r1];
-                    }
-                    else
-                    {
-                        g_data[pc] = g_data[r2];
-                    }
-                    TRACE3(("%d D: PHI, %d, %d, %f, %f, %f, %d\n", pc, r1, r2, g_data[r1], g_data[r2], g_data[pc], g_status));
-                    break;
-                default:
-                    TRACE1(("Error: invalid OP %d\n", op));
-            }
-        }
-        else
-        {
-            // S-type instruction
-            uint32_t imm = (ins >> 21) & 0x7;
-            uint32_t r1 = ins & 0x3fff;
-            op = (ins >> 24) & 0xf;
-            switch (op)
-            {
-                case S_OP_NOOP:
-                    TRACE3(("%d S: NOOP, %d, %d, %f, %f\n", pc, imm, r1, g_data[r1], g_data[pc]));
-                    break;
-                case S_OP_CMPZ:
-                    {
-                        switch (imm)
-                        {
-                            case CMPZ_OP_LTZ:
-                                if (g_data[r1] < 0.0)
-                                {
-                                    g_status = 1;
-                                }
-                                else
-                                {
-                                    g_status = 0;
-                                }
-                                TRACE3(("%d S: CMPZ <, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
-                                break;
-                            case CMPZ_OP_LEZ:
-                                if (g_data[r1] <= 0.0)
-                                {
-                                    g_status = 1;
-                                }
-                                else
-                                {
-                                    g_status = 0;
-                                }
-                                TRACE3(("%d S: CMPZ <=, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
-                                break;
-                            case CMPZ_OP_EQZ:
-                                if (g_data[r1] == 0.0)
-                                {
-                                    g_status = 1;
-                                }
-                                else
-                                {
-                                    g_status = 0;
-                                }
-                                TRACE3(("%d S: CMPZ ==, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
-                                break;
-                            case CMPZ_OP_GEZ:
-                                if (g_data[r1] >= 0.0)
-                                {
-                                    g_status = 1;
-                                }
-                                else
-                                {
-                                    g_status = 0;
-                                }
-                                TRACE3(("%d S: CMPZ >=, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
-                                break;
-                            case CMPZ_OP_GTZ:
-                                if (g_data[r1] > 0.0)
-                                {
-                                    g_status = 1;
-                                }
-                                else
-                                {
-                                    g_status = 0;
-                                }
-                                TRACE3(("%d S: CMPZ >, %d, %d, %f, %f, %d\n", pc, imm, r1, g_data[r1], g_data[pc], g_status));
-                                break;
-                            default:
-                                TRACE1(("Error: invalid CMPZ OP %d\n", imm));
-                        }
-                    }
-                    break;
-                case S_OP_SQRT:
-                    {
-                        g_data[pc] = sqrt(g_data[r1]);
-                    }
-                    TRACE3(("%d S: SQRT, %d, %d, %f, %f\n", pc, imm, r1, g_data[r1], g_data[pc]));
-                    break;
-                case S_OP_COPY:
-                    g_data[pc] = g_data[r1];
-                    TRACE3(("%d S: COPY, %d, %d, %f, %f\n", pc, imm, r1, g_data[r1], g_data[pc]));
-                    break;
-                case S_OP_INPUT:
-                    g_data[pc] = g_input[r1];
-                    TRACE3(("%d S: INPUT, %d, %d, %f, %f\n", pc, imm, r1, g_data[r1], g_data[pc]));
-                    break;
-                default:
-                    TRACE1(("Error: invalid OP %d\n", op));
-            }
-        }
+        frame_t* f = &g_frames[pc];
+		switch (f->op)
+		{
+		case OP_NOOP:
+			break;
+		case OP_ADD:
+			f->data = g_frames[f->r1].data + g_frames[f->r2].data;
+			break;
+		case OP_SUB:
+			f->data = g_frames[f->r1].data - g_frames[f->r2].data;
+			break;
+		case OP_MULT:
+			f->data = g_frames[f->r1].data * g_frames[f->r2].data;
+			break;
+		case OP_DIV:
+			if (g_frames[f->r2].data == 0.0)
+			{
+				f->data = 0.0;
+			}
+			else
+			{
+				f->data = g_frames[f->r1].data / g_frames[f->r2].data;
+			}
+			break;
+		case OP_OUTPUT:
+			g_output[f->r1] = g_frames[f->r2].data;
+			break;
+		case OP_PHI:
+			f->data = g_status ? g_frames[f->r1].data : g_frames[f->r2].data;
+			break;
+		case OP_CMPZ_LTZ:
+			g_status = g_frames[f->r1].data < 0.0 ? 1 : 0;
+			break;
+		case OP_CMPZ_LEZ:
+			g_status = g_frames[f->r1].data <= 0.0 ? 1 : 0;
+			break;
+		case OP_CMPZ_EQZ:
+			g_status = g_frames[f->r1].data == 0.0 ? 1 : 0;
+			break;
+		case OP_CMPZ_GEZ:
+			g_status = g_frames[f->r1].data >= 0.0 ? 1 : 0;
+			break;
+		case OP_CMPZ_GTZ:
+			g_status = g_frames[f->r1].data > 0.0 ? 1 : 0;
+			break;
+		case OP_SQRT:
+			f->data = sqrt(g_frames[f->r1].data);
+			break;
+		case OP_COPY:
+			f->data = g_frames[f->r1].data;
+			break;
+		case OP_INPUT:
+			f->data = g_input[f->r1];
+			break;
+		default:
+			TRACE1(("Error: invalid OP %d\n", f->op));
+		}
     }
 }
